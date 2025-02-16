@@ -1,5 +1,6 @@
 "use client";
 
+import useSWR from "swr";
 import {
   Table,
   TableBody,
@@ -11,32 +12,36 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Eye, Pencil, Trash2 } from "lucide-react";
+import { RoomType } from "@prisma/client";
 
-const rooms = [
-  {
-    id: 1,
-    number: "101",
-    type: "Deluxe",
-    pricePerNight: "$200",
-    isAvailable: true,
-  },
-  {
-    id: 2,
-    number: "102",
-    type: "Suite",
-    pricePerNight: "$350",
-    isAvailable: false,
-  },
-  {
-    id: 3,
-    number: "201",
-    type: "Standard",
-    pricePerNight: "$150",
-    isAvailable: true,
-  },
-];
+type Room = {
+  id: number;
+  roomNumber: string;
+  roomType: RoomType;
+  pricePerNight: number;
+  isAvailable: boolean;
+};
+
+type ApiResponse = {
+  success: boolean;
+  data: Room[];
+};
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
+const formatRoomType = (type: RoomType) => {
+  return type
+    .split("_")
+    .map((word) => word.charAt(0) + word.slice(1).toLowerCase())
+    .join(" ");
+};
 
 export function RoomsList() {
+  const { data, error, isLoading } = useSWR<ApiResponse>("/api/rooms", fetcher);
+
+  if (error) return <div>Error loading rooms</div>;
+  if (isLoading) return <div>Loading...</div>;
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -54,11 +59,11 @@ export function RoomsList() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rooms.map((room) => (
+          {data?.data.map((room) => (
             <TableRow key={room.id}>
-              <TableCell>{room.number}</TableCell>
-              <TableCell>{room.type}</TableCell>
-              <TableCell>{room.pricePerNight}</TableCell>
+              <TableCell>{room.roomNumber}</TableCell>
+              <TableCell>{formatRoomType(room.roomType)}</TableCell>
+              <TableCell>${room.pricePerNight}</TableCell>
               <TableCell>
                 <Badge variant={room.isAvailable ? "success" : "destructive"}>
                   {room.isAvailable ? "Available" : "Occupied"}
