@@ -2,6 +2,9 @@
   "name": "hotel-oasis-pms",
   "version": "0.1.0",
   "private": true,
+  "prisma": {
+    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} scripts/seedDatabase.ts"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -11,7 +14,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
-    "@prisma/client": "6.2.1",
+    "@prisma/client": "6.3.1",
     "@radix-ui/react-accordion": "^1.2.2",
     "@radix-ui/react-alert-dialog": "^1.1.4",
     "@radix-ui/react-aspect-ratio": "^1.1.1",
@@ -42,18 +45,19 @@
     "bcrypt": "^5.1.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
     "embla-carousel-react": "^8.5.2",
     "lucide-react": "^0.473.0",
     "next": "15.1.5",
     "next-auth": "^4.24.11",
     "next-themes": "^0.4.4",
-    "prisma": "^6.2.1",
     "react": "^19.0.0",
     "react-day-picker": "^9.5.0",
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.54.2",
     "recharts": "^2.15.0",
     "sonner": "^1.7.2",
+    "swr": "^2.3.2",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
     "ts-node": "^10.9.2",
@@ -69,6 +73,7 @@
     "eslint": "^9.18.0",
     "eslint-config-next": "15.1.5",
     "postcss": "^8.5.1",
+    "prisma": "^6.3.1",
     "tailwindcss": "^3.4.17",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3"
