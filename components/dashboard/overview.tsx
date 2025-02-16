@@ -1,7 +1,6 @@
 "use client";
 
 import { Line, LineChart, ResponsiveContainer, Tooltip } from "recharts";
-import { Card } from "@/components/ui/card";
 
 const data = [
   { name: "Jan", total: 2400 },
