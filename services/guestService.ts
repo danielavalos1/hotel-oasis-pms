@@ -1,58 +1,47 @@
-import { PrismaClient, Guest } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
+import { Guest, Prisma } from "@prisma/client";
 
 export const guestService = {
-  // Create
-  async createGuest(data: Omit<Guest, "id">): Promise<Guest> {
-    try {
-      return await prisma.guest.create({
-        data,
-      });
-    } catch (error) {
-      throw new Error(`Error creating guest: ${error}`);
-    }
+  async createGuest(data: Prisma.GuestCreateInput): Promise<Guest> {
+    return await prisma.guest.create({ data });
   },
 
-  // Read
-  async getGuest(id: bigint): Promise<Guest | null> {
-    try {
-      return await prisma.guest.findUnique({
-        where: { id },
-      });
-    } catch (error) {
-      throw new Error(`Error fetching guest: ${error}`);
-    }
+  async getGuest(id: number): Promise<Guest | null> {
+    return await prisma.guest.findUnique({
+      where: { id },
+      include: { bookings: true },
+    });
   },
 
   async getAllGuests(): Promise<Guest[]> {
-    try {
-      return await prisma.guest.findMany();
-    } catch (error) {
-      throw new Error(`Error fetching guests: ${error}`);
-    }
+    return await prisma.guest.findMany({
+      include: { bookings: true },
+    });
   },
 
-  // Update
-  async updateGuest(id: bigint, data: Partial<Guest>): Promise<Guest> {
-    try {
-      return await prisma.guest.update({
-        where: { id },
-        data,
-      });
-    } catch (error) {
-      throw new Error(`Error updating guest: ${error}`);
-    }
+  async updateGuest(id: number, data: Partial<Guest>): Promise<Guest> {
+    return await prisma.guest.update({
+      where: { id },
+      data,
+      include: { bookings: true },
+    });
   },
 
-  // Delete
-  async deleteGuest(id: bigint): Promise<Guest> {
-    try {
-      return await prisma.guest.delete({
-        where: { id },
-      });
-    } catch (error) {
-      throw new Error(`Error deleting guest: ${error}`);
-    }
+  async deleteGuest(id: number): Promise<Guest> {
+    return await prisma.guest.delete({
+      where: { id },
+    });
+  },
+
+  async searchGuests(query: string): Promise<Guest[]> {
+    return await prisma.guest.findMany({
+      where: {
+        OR: [
+          { firstName: { contains: query, mode: "insensitive" } },
+          { lastName: { contains: query, mode: "insensitive" } },
+          { email: { contains: query, mode: "insensitive" } },
+        ],
+      },
+    });
   },
 };
