@@ -6,7 +6,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const booking = await bookingService.getBooking(BigInt(params.id));
+    const booking = await bookingService.getBooking(Number(params.id));
     if (!booking) {
       return NextResponse.json(
         { success: false, error: "Booking not found" },
@@ -28,7 +28,7 @@ export async function PUT(
 ) {
   try {
     const body = await request.json();
-    const booking = await bookingService.updateBooking(BigInt(params.id), body);
+    const booking = await bookingService.updateBooking(Number(params.id), body);
     return NextResponse.json({ success: true, data: booking });
   } catch {
     return NextResponse.json(
@@ -43,7 +43,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    await bookingService.deleteBooking(BigInt(params.id));
+    await bookingService.deleteBooking(Number(params.id));
     return NextResponse.json({
       success: true,
       message: "Booking deleted successfully",
