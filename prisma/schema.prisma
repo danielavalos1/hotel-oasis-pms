@@ -10,19 +10,19 @@ generator client {
 }
 
 model Guest {
-  id          BigInt    @id @default(autoincrement())
+  id          Int       @id @default(autoincrement())
   firstName   String
   lastName    String
   email       String    @unique
-  phoneNumber String?
+  phoneNumber String
   address     String?
   bookings    Booking[]
 }
 
 model Room {
-  id            BigInt         @id @default(autoincrement())
+  id            Int            @id @default(autoincrement())
   roomNumber    String         @unique
-  roomType      String
+  roomType      RoomType
   pricePerNight Decimal        @db.Decimal(10, 2)
   isAvailable   Boolean        @default(true)
   bookings      Booking[]
@@ -30,10 +30,19 @@ model Room {
   channelRates  ChannelRate[]
 }
 
+enum RoomType {
+  SENCILLA
+  SENCILLA_ESPECIAL
+  DOBLE
+  DOBLE_ESPECIAL
+  SUITE_A
+  SUITE_B
+}
+
 model Booking {
-  id            BigInt                @id @default(autoincrement())
-  guestId       BigInt
-  roomId        BigInt
+  id            Int                   @id @default(autoincrement())
+  guestId       Int
+  roomId        Int
   checkInDate   DateTime              @db.Date
   checkOutDate  DateTime              @db.Date
   totalPrice    Decimal               @db.Decimal(10, 2)
@@ -45,71 +54,56 @@ model Booking {
 }
 
 model Payment {
-  id            BigInt   @id @default(autoincrement())
-  bookingId     BigInt
+  id            Int      @id @default(autoincrement())
+  bookingId     Int
   amount        Decimal  @db.Decimal(10, 2)
   paymentDate   DateTime @db.Date
   paymentMethod String
   booking       Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 }
 
-model Role {
-  id          BigInt           @id @default(autoincrement())
-  roleName    String           @unique
-  users       User[]
-  permissions RolePermission[]
-}
-
-model Permission {
-  id             BigInt           @id @default(autoincrement())
-  permissionName String           @unique
-  roles          RolePermission[]
+enum UserRole {
+  ADMIN
+  RECEPTIONIST
+  HOUSEKEEPER
+  SUPERADMIN
 }
 
 model User {
-  id           BigInt  @id @default(autoincrement())
-  username     String  @unique
+  id           Int      @id @default(autoincrement())
+  username     String   @unique
+  name         String
   passwordHash String
-  email        String  @unique
-  roleId       BigInt?
-  role         Role?   @relation(fields: [roleId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-}
-
-model RolePermission {
-  roleId       BigInt
-  permissionId BigInt
-  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-
-  @@id([roleId, permissionId])
+  email        String   @unique
+  role         UserRole @default(RECEPTIONIST)
 }
 
 model RoomInventory {
-  id                  BigInt    @id @default(autoincrement())
-  roomId              BigInt    @unique
+  id                  Int       @id @default(autoincrement())
+  roomId              Int       @unique
   maintenanceStatus   String
   lastMaintenanceDate DateTime? @db.Date
   room                Room      @relation(fields: [roomId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 }
 
 model Amenity {
-  id          BigInt  @id @default(autoincrement())
+  id          Int     @id @default(autoincrement())
   name        String  @unique
   description String?
   isAvailable Boolean @default(true)
 }
 
 model Channel {
-  id           BigInt        @id @default(autoincrement())
+  id           Int           @id @default(autoincrement())
   channelName  String        @unique
   contactInfo  String?
   channelRates ChannelRate[]
 }
 
 model ChannelRate {
-  id        BigInt   @id @default(autoincrement())
-  roomId    BigInt
-  channelId BigInt
+  id        Int      @id @default(autoincrement())
+  roomId    Int
+  channelId Int
   rate      Decimal  @db.Decimal(10, 2)
   startDate DateTime @db.Date
   endDate   DateTime @db.Date
@@ -118,13 +112,13 @@ model ChannelRate {
 }
 
 model BookingSource {
-  id         BigInt @id @default(autoincrement())
+  id         Int    @id @default(autoincrement())
   sourceName String @unique
 }
 
 model BookingModification {
-  id                  BigInt   @id @default(autoincrement())
-  bookingId           BigInt
+  id                  Int      @id @default(autoincrement())
+  bookingId           Int
   modificationDate    DateTime @db.Date
   modificationDetails String
   booking             Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade, onUpdate: Cascade)
