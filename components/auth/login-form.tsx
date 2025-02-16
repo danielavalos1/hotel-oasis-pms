@@ -64,7 +64,7 @@ export function LoginForm() {
 
       router.push("/dashboard");
       router.refresh();
-    } catch (error) {
+    } catch {
       toast({
         variant: "destructive",
         title: "Error",
