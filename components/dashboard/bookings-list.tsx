@@ -1,5 +1,6 @@
 "use client";
 
+import useSWR from "swr";
 import {
   Table,
   TableBody,
@@ -10,38 +11,39 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Eye, Pencil, Trash2 } from "lucide-react";
+import { format } from "date-fns";
 
-const bookings = [
-  {
-    id: 1,
-    guest: "John Smith",
-    room: "101",
-    checkIn: "2024-03-20",
-    checkOut: "2024-03-25",
-    status: "Confirmed",
-    totalPrice: "$750",
-  },
-  {
-    id: 2,
-    guest: "Sarah Johnson",
-    room: "205",
-    checkIn: "2024-03-21",
-    checkOut: "2024-03-23",
-    status: "Checked In",
-    totalPrice: "$450",
-  },
-  {
-    id: 3,
-    guest: "Michael Brown",
-    room: "304",
-    checkIn: "2024-03-22",
-    checkOut: "2024-03-24",
-    status: "Pending",
-    totalPrice: "$500",
-  },
-];
+type Booking = {
+  id: number;
+  guest: {
+    firstName: string;
+    lastName: string;
+  };
+  room: {
+    roomNumber: string;
+  };
+  checkInDate: string;
+  checkOutDate: string;
+  status: string;
+  totalPrice: number;
+};
+
+type ApiResponse = {
+  success: boolean;
+  data: Booking[];
+};
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export function BookingsList() {
+  const { data, error, isLoading } = useSWR<ApiResponse>(
+    "/api/bookings",
+    fetcher
+  );
+
+  if (error) return <div>Error loading bookings</div>;
+  if (isLoading) return <div>Loading...</div>;
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -61,14 +63,18 @@ export function BookingsList() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {bookings.map((booking) => (
+          {data?.data.map((booking) => (
             <TableRow key={booking.id}>
-              <TableCell>{booking.guest}</TableCell>
-              <TableCell>{booking.room}</TableCell>
-              <TableCell>{booking.checkIn}</TableCell>
-              <TableCell>{booking.checkOut}</TableCell>
+              <TableCell>{`${booking.guest.firstName} ${booking.guest.lastName}`}</TableCell>
+              <TableCell>{booking.room.roomNumber}</TableCell>
+              <TableCell>
+                {format(new Date(booking.checkInDate), "yyyy-MM-dd")}
+              </TableCell>
+              <TableCell>
+                {format(new Date(booking.checkOutDate), "yyyy-MM-dd")}
+              </TableCell>
               <TableCell>{booking.status}</TableCell>
-              <TableCell>{booking.totalPrice}</TableCell>
+              <TableCell>${booking.totalPrice}</TableCell>
               <TableCell>
                 <div className="flex gap-2">
                   <Button variant="ghost" size="icon">
