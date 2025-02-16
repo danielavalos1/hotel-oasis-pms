@@ -1,59 +1,140 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, RoomType, UserRole } from "@prisma/client";
 import * as bcrypt from "bcrypt";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  // Crear roles
-  const adminRole = await prisma.role.create({
-    data: {
-      roleName: "administrator",
+  // Crear usuarios
+  const hashedPassword = await bcrypt.hash("123456", 10);
+
+  const users = [
+    {
+      username: "admin",
+      name: "Administrator",
+      email: "admin@test.com",
+      role: UserRole.SUPERADMIN,
     },
-  });
+    {
+      username: "receptionist1",
+      name: "John Doe",
+      email: "receptionist@test.com",
+      role: UserRole.RECEPTIONIST,
+    },
+    {
+      username: "housekeeper1",
+      name: "Jane Smith",
+      email: "housekeeper@test.com",
+      role: UserRole.HOUSEKEEPER,
+    },
+  ];
 
-  await prisma.role.createMany({
-    data: [{ roleName: "receptionist" }, { roleName: "creator" }],
-  });
-
-  // Crear permisos básicos
-  await prisma.permission.createMany({
-    data: [
-      { permissionName: "manage_users" },
-      { permissionName: "manage_bookings" },
-      { permissionName: "manage_rooms" },
-      { permissionName: "manage_guests" },
-      { permissionName: "view_reports" },
-      { permissionName: "manage_payments" },
-    ],
-  });
-
-  // Obtener todos los permisos para asignarlos al rol de administrador
-  const allPermissions = await prisma.permission.findMany();
-
-  // Asignar todos los permisos al rol de administrador
-  for (const permission of allPermissions) {
-    await prisma.rolePermission.create({
+  for (const user of users) {
+    await prisma.user.create({
       data: {
-        roleId: adminRole.id,
-        permissionId: permission.id,
+        ...user,
+        passwordHash: hashedPassword,
       },
     });
   }
 
-  // Crear usuario administrador
-  const hashedPassword = await bcrypt.hash("123456", 10);
+  // Crear amenidades
+  const amenities = [
+    "Televisión",
+    "Smart TV",
+    'TV 65"',
+    "Aire acondicionado",
+    "Baño privado",
+    "Baño familiar",
+    "WiFi gratuito",
+    "Amenidades premium",
+    "Dos camas",
+    "Jacuzzi privado",
+    "Sala de estar",
+    "Comedor",
+  ];
 
-  const adminUser = await prisma.user.create({
-    data: {
-      username: "admin",
-      email: "admin@test.com",
-      passwordHash: hashedPassword,
-      roleId: adminRole.id,
+  for (const amenity of amenities) {
+    await prisma.amenity.create({
+      data: {
+        name: amenity,
+        description: `Amenidad: ${amenity}`,
+      },
+    });
+  }
+
+  // Configuración de tipos de habitaciones
+  const roomConfigs = [
+    {
+      type: RoomType.SENCILLA,
+      count: 11,
+      baseNumber: 101,
+      price: 750.0,
     },
-  });
+    {
+      type: RoomType.SENCILLA_ESPECIAL,
+      count: 1,
+      baseNumber: 201,
+      price: 900.0,
+    },
+    {
+      type: RoomType.DOBLE,
+      count: 11,
+      baseNumber: 301,
+      price: 1050.0,
+    },
+    {
+      type: RoomType.DOBLE_ESPECIAL,
+      count: 2,
+      baseNumber: 401,
+      price: 1200.0,
+    },
+    {
+      type: RoomType.SUITE_A,
+      count: 1,
+      baseNumber: 501,
+      price: 1400.0,
+    },
+    {
+      type: RoomType.SUITE_B,
+      count: 1,
+      baseNumber: 601,
+      price: 1400.0,
+    },
+  ];
+
+  // Crear habitaciones
+  for (const config of roomConfigs) {
+    for (let i = 0; i < config.count; i++) {
+      const roomNumber = (config.baseNumber + i).toString();
+      await prisma.room.create({
+        data: {
+          roomNumber,
+          roomType: config.type,
+          pricePerNight: config.price,
+          isAvailable: true,
+          roomInventory: {
+            create: {
+              maintenanceStatus: "GOOD",
+              lastMaintenanceDate: new Date(),
+            },
+          },
+        },
+      });
+    }
+  }
 
   console.log("Database seeded successfully!");
-  console.log("Admin user created:", adminUser.email);
+  console.log(
+    "Users created:",
+    users.map((u) => `${u.name} (${u.role})`).join(", ")
+  );
+  console.log(`Created rooms:
+    - ${roomConfigs[0].count} Sencillas
+    - ${roomConfigs[1].count} Sencilla Especial
+    - ${roomConfigs[2].count} Dobles
+    - ${roomConfigs[3].count} Dobles Especiales
+    - ${roomConfigs[4].count} Suite A
+    - ${roomConfigs[5].count} Suite B`);
 }
 
 main()
