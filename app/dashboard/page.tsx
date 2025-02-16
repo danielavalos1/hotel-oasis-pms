@@ -27,14 +27,15 @@ import { RatesList } from "@/components/dashboard/rates-list";
 import { InventoryList } from "@/components/dashboard/inventory-list";
 import { AmenitiesList } from "@/components/dashboard/amenities-list";
 import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { signOut } from "next-auth/react";
 
 export default function Dashboard() {
-  const router = useRouter();
-
-  const handleLogout = () => {
-    router.push("/auth");
+  const handleLogout = async () => {
+    await signOut({
+      callbackUrl: "/login",
+      redirect: true,
+    });
   };
 
   return (
