@@ -1,5 +1,6 @@
 "use client";
 
+import useSWR from "swr";
 import {
   Table,
   TableBody,
@@ -11,34 +12,28 @@ import {
 import { Button } from "@/components/ui/button";
 import { Eye, Pencil, Trash2 } from "lucide-react";
 
-const guests = [
-  {
-    id: 1,
-    firstName: "John",
-    lastName: "Smith",
-    email: "john@example.com",
-    phone: "+1 234 567 890",
-    address: "123 Main St, City",
-  },
-  {
-    id: 2,
-    firstName: "Sarah",
-    lastName: "Johnson",
-    email: "sarah@example.com",
-    phone: "+1 234 567 891",
-    address: "456 Oak St, City",
-  },
-  {
-    id: 3,
-    firstName: "Michael",
-    lastName: "Brown",
-    email: "michael@example.com",
-    phone: "+1 234 567 892",
-    address: "789 Pine St, City",
-  },
-];
+type Guest = {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phoneNumber: string;
+  address: string | null;
+};
+
+type ApiResponse = {
+  success: boolean;
+  data: Guest[];
+};
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export function GuestsList() {
+  const { data, error, isLoading } = useSWR<ApiResponse>("/api/guests", fetcher);
+
+  if (error) return <div>Error loading guests</div>;
+  if (isLoading) return <div>Loading...</div>;
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -56,12 +51,12 @@ export function GuestsList() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {guests.map((guest) => (
+          {data?.data.map((guest) => (
             <TableRow key={guest.id}>
               <TableCell>{`${guest.firstName} ${guest.lastName}`}</TableCell>
               <TableCell>{guest.email}</TableCell>
-              <TableCell>{guest.phone}</TableCell>
-              <TableCell>{guest.address}</TableCell>
+              <TableCell>{guest.phoneNumber}</TableCell>
+              <TableCell>{guest.address || 'N/A'}</TableCell>
               <TableCell>
                 <div className="flex gap-2">
                   <Button variant="ghost" size="icon">
