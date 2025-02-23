@@ -52,6 +52,7 @@ export const bookingService = {
           checkOutDate: validatedData.checkOutDate,
           totalPrice: validatedData.totalPrice,
           status: validatedData.status,
+          numberOfGuests: validatedData.numberOfGuests || 1,
         },
         include: {
           guest: true,
