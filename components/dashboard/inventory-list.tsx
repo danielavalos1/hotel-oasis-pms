@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Eye, Pencil, Trash2, PenTool as Tool } from "lucide-react";
+import { Eye, Pencil, PenTool as Tool } from "lucide-react";
 
 const inventory = [
   {
@@ -53,7 +53,9 @@ export function InventoryList({ showMaintenance = false }: InventoryListProps) {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold">
-            {showMaintenance ? "Maintenance Management" : "Inventory Management"}
+            {showMaintenance
+              ? "Maintenance Management"
+              : "Inventory Management"}
           </h2>
           <p className="text-muted-foreground">
             {showMaintenance
@@ -120,7 +122,7 @@ export function InventoryList({ showMaintenance = false }: InventoryListProps) {
                     item.maintenanceStatus === "Good"
                       ? "success"
                       : item.maintenanceStatus === "Needs Attention"
-                      ? "warning"
+                      ? "secondary"
                       : "destructive"
                   }
                 >
