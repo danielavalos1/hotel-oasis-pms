@@ -37,7 +37,7 @@ export function Overview() {
                           Revenue
                         </span>
                         <span className="font-bold">
-                          ${payload[0].value.toLocaleString()}
+                          ${payload[0].value?.toLocaleString() ?? ""}
                         </span>
                       </div>
                     </div>
