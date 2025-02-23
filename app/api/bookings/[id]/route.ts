@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { bookingService } from "@/services/bookingService";
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest) {
   try {
-    const booking = await bookingService.getBooking(Number(params.id));
+    const body = await request.json();
+    const booking = await bookingService.getBooking(Number(body.id));
     if (!booking) {
       return NextResponse.json(
         { success: false, error: "Booking not found" },
@@ -22,13 +20,10 @@ export async function GET(
   }
 }
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const booking = await bookingService.updateBooking(Number(params.id), body);
+    const booking = await bookingService.updateBooking(Number(body.id), body);
     return NextResponse.json({ success: true, data: booking });
   } catch {
     return NextResponse.json(
@@ -38,12 +33,10 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: NextRequest) {
   try {
-    await bookingService.deleteBooking(Number(params.id));
+    const body = await request.json();
+    await bookingService.deleteBooking(Number(body.id));
     return NextResponse.json({
       success: true,
       message: "Booking deleted successfully",
