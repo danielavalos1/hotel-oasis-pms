@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { bookingService } from "@/services/bookingService";
 import { ZodError } from "zod";
 import { Prisma } from "@prisma/client";
+import { emailService } from "@/services/emailService";
 
 export async function GET(request: NextRequest) {
   try {
@@ -34,6 +35,18 @@ export async function POST(request: NextRequest) {
 
     const booking = await bookingService.createBooking(body);
     console.log("[API] Create Booking - Success:", booking);
+
+    // Enviar correos electrónicos
+    try {
+      await Promise.all([
+        emailService.sendGuestBookingConfirmation(booking),
+        emailService.sendStaffBookingNotification(booking),
+      ]);
+    } catch (emailError) {
+      console.error("[API] Create Booking - Email sending failed:", emailError);
+      // Continuamos con la respuesta exitosa aunque falle el envío de correos
+    }
+
     return NextResponse.json({ success: true, data: booking }, { status: 201 });
   } catch (error) {
     if (error instanceof ZodError) {
