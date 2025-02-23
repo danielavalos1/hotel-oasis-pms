@@ -1,31 +1,49 @@
 import { prisma } from "@/lib/prisma";
-import { createBookingSchema, type CreateBookingInput } from "@/lib/validations/booking";
+import {
+  createBookingSchema,
+  type CreateBookingInput,
+} from "@/lib/validations/booking";
 import { Booking } from "@prisma/client";
 
 export const bookingService = {
   async createBooking(input: CreateBookingInput) {
     const validatedData = createBookingSchema.parse(input);
-    
+
     return await prisma.$transaction(async (tx) => {
       let guestId: number;
-      
-      if ('id' in validatedData.guest) {
+
+      if ("id" in validatedData.guest) {
         const existingGuest = await tx.guest.findUnique({
           where: { id: validatedData.guest.id },
         });
-        
+
         if (!existingGuest) {
-          throw new Error('Guest not found');
+          throw new Error("Guest not found");
         }
-        
+
         guestId = existingGuest.id;
       } else {
-        const newGuest = await tx.guest.create({
-          data: validatedData.guest,
+        // Primero buscar por email
+        const existingGuest = await tx.guest.findUnique({
+          where: { email: validatedData.guest.email },
         });
-        guestId = newGuest.id;
+
+        if (existingGuest) {
+          // Si existe, actualizar sus datos
+          const updatedGuest = await tx.guest.update({
+            where: { id: existingGuest.id },
+            data: validatedData.guest,
+          });
+          guestId = updatedGuest.id;
+        } else {
+          // Si no existe, crear nuevo huésped
+          const newGuest = await tx.guest.create({
+            data: validatedData.guest,
+          });
+          guestId = newGuest.id;
+        }
       }
-      
+
       return await tx.booking.create({
         data: {
           guestId,
@@ -73,7 +91,10 @@ export const bookingService = {
     }
   },
 
-  async getBookingsByDateRange(startDate: Date, endDate: Date): Promise<Booking[]> {
+  async getBookingsByDateRange(
+    startDate: Date,
+    endDate: Date
+  ): Promise<Booking[]> {
     try {
       return await prisma.booking.findMany({
         where: {
