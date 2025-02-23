@@ -30,10 +30,14 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    console.log("[API] Create Booking - Request body:", body);
+
     const booking = await bookingService.createBooking(body);
+    console.log("[API] Create Booking - Success:", booking);
     return NextResponse.json({ success: true, data: booking }, { status: 201 });
   } catch (error) {
     if (error instanceof ZodError) {
+      console.log("[API] Create Booking - Validation error:", error.errors);
       return NextResponse.json(
         {
           success: false,
@@ -48,6 +52,10 @@ export async function POST(request: NextRequest) {
     }
 
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      console.log("[API] Create Booking - Prisma error:", {
+        code: error.code,
+        message: error.message,
+      });
       switch (error.code) {
         case "P2002":
           return NextResponse.json(
@@ -71,6 +79,11 @@ export async function POST(request: NextRequest) {
           break;
       }
     }
+
+    // Log para errores no manejados específicamente
+    console.error("[API] Create Booking - Unhandled error:", {
+      error: error instanceof Error ? error.message : error,
+    });
 
     // Capturar cualquier error de serialización
     const errorMessage =
