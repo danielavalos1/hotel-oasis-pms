@@ -22,7 +22,10 @@ model Guest {
 model Room {
   id            Int            @id @default(autoincrement())
   roomNumber    String         @unique
-  roomType      RoomType
+  type          RoomType       @default(SENCILLA)
+  capacity      Int            @default(2)
+  description   String?
+  amenities     String[]       @default([])
   pricePerNight Decimal        @db.Decimal(10, 2)
   isAvailable   Boolean        @default(true)
   bookings      Booking[]
