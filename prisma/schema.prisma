@@ -43,17 +43,18 @@ enum RoomType {
 }
 
 model Booking {
-  id            Int                   @id @default(autoincrement())
-  guestId       Int
-  roomId        Int
-  checkInDate   DateTime              @db.Date
-  checkOutDate  DateTime              @db.Date
-  totalPrice    Decimal               @db.Decimal(10, 2)
-  status        String
-  guest         Guest                 @relation(fields: [guestId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  room          Room                  @relation(fields: [roomId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  payments      Payment[]
-  modifications BookingModification[]
+  id             Int                   @id @default(autoincrement())
+  guestId        Int
+  roomId         Int
+  checkInDate    DateTime              @db.Date
+  checkOutDate   DateTime              @db.Date
+  totalPrice     Decimal               @db.Decimal(10, 2)
+  status         String
+  numberOfGuests Int                   @default(1)
+  guest          Guest                 @relation(fields: [guestId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  room           Room                  @relation(fields: [roomId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  payments       Payment[]
+  modifications  BookingModification[]
 }
 
 model Payment {
