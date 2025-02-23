@@ -12,15 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Eye, Pencil, Trash2 } from "lucide-react";
-import { RoomType } from "@prisma/client";
-
-type Room = {
-  id: number;
-  roomNumber: string;
-  roomType: RoomType;
-  pricePerNight: number;
-  isAvailable: boolean;
-};
+import { RoomType, Room } from "@prisma/client";
 
 type ApiResponse = {
   success: boolean;
@@ -62,8 +54,8 @@ export function RoomsList() {
           {data?.data.map((room) => (
             <TableRow key={room.id}>
               <TableCell>{room.roomNumber}</TableCell>
-              <TableCell>{formatRoomType(room.roomType)}</TableCell>
-              <TableCell>${room.pricePerNight}</TableCell>
+              <TableCell>{formatRoomType(room.type)}</TableCell>
+              <TableCell>${Number(room.pricePerNight)}</TableCell>
               <TableCell>
                 <Badge variant={room.isAvailable ? "success" : "destructive"}>
                   {room.isAvailable ? "Available" : "Occupied"}
