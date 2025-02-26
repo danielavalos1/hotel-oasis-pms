@@ -1,9 +1,0 @@
-node_modules
-.env
-.env.*
-.git
-.gitignore
-README.md
-.next
-*.log
-# NO excluir la carpeta prisma
