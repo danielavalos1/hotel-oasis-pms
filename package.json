@@ -7,11 +7,10 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "db:seed": "tsx scripts/seedDatabase.ts",
-    "postinstall": "prisma generate"
+    "db:seed": "tsx scripts/seedDatabase.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
