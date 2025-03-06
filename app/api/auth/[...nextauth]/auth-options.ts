@@ -1,7 +1,8 @@
 import type { NextAuthOptions, User } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaClient, UserRole } from "@prisma/client";
-import * as bcrypt from "bcrypt";
+// Reemplazar bcrypt por bcryptjs
+import * as bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
