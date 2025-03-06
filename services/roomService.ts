@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { Room, Prisma, RoomType } from "@prisma/client";
+import { Room, Prisma } from "@prisma/client";
 import { AvailableRoomsByType, RoomAvailabilityParams } from "@/types/room";
 
 export const roomService = {
@@ -16,7 +16,11 @@ export const roomService = {
     return await prisma.room.findUnique({
       where: { id },
       include: {
-        bookings: true,
+        bookingRooms: {
+          include: {
+            booking: true,
+          },
+        },
         roomInventory: true,
         channelRates: true,
       },
@@ -33,7 +37,8 @@ export const roomService = {
   },
 
   async getAvailableRooms(startDate: Date, endDate: Date): Promise<Room[]> {
-    const bookedRooms = await prisma.booking.findMany({
+    // Find bookings that overlap with the requested date range
+    const bookings = await prisma.booking.findMany({
       where: {
         OR: [
           {
@@ -44,14 +49,26 @@ export const roomService = {
           },
         ],
       },
-      select: { roomId: true },
+      include: {
+        bookingRooms: {
+          select: {
+            roomId: true,
+          },
+        },
+      },
     });
 
-    const bookedRoomIds = bookedRooms.map((booking) => booking.roomId);
+    // Extract room IDs from the bookingRooms relation
+    const bookedRoomIds = bookings
+      .flatMap((booking) => booking.bookingRooms)
+      .map((bookingRoom) => bookingRoom.roomId);
 
     return await prisma.room.findMany({
       where: {
-        AND: [{ isAvailable: true }, { id: { notIn: bookedRoomIds } }],
+        AND: [
+          { isAvailable: true },
+          { id: { notIn: bookedRoomIds.length > 0 ? bookedRoomIds : [0] } },
+        ],
       },
       include: { roomInventory: true },
     });
@@ -63,21 +80,25 @@ export const roomService = {
     guests,
     roomType,
   }: RoomAvailabilityParams): Promise<AvailableRoomsByType[]> {
-    const bookedRooms = await prisma.booking.findMany({
+    // Find bookings that overlap with the requested dates
+    const bookings = await prisma.booking.findMany({
       where: {
         OR: [
+          // Check-in before/during stay, check-out after requested check-in
           {
             AND: [
               { checkInDate: { lte: checkIn } },
               { checkOutDate: { gt: checkIn } },
             ],
           },
+          // Check-in before requested check-out, check-out during/after stay
           {
             AND: [
               { checkInDate: { lt: checkOut } },
               { checkOutDate: { gte: checkOut } },
             ],
           },
+          // Complete overlap (booking is fully within the requested period)
           {
             AND: [
               { checkInDate: { gte: checkIn } },
@@ -86,20 +107,30 @@ export const roomService = {
           },
         ],
       },
-      select: {
-        roomId: true,
+      include: {
+        bookingRooms: {
+          select: {
+            roomId: true,
+          },
+        },
       },
     });
 
-    const bookedRoomIds = bookedRooms.map((booking) => booking.roomId);
+    // Extract room IDs from the bookingRooms relation
+    const bookedRoomIds = bookings
+      .flatMap((booking) => booking.bookingRooms)
+      .map((bookingRoom) => bookingRoom.roomId);
+
+    // Handle empty bookedRoomIds array (add a dummy ID that won't match any room)
+    const notInCondition = bookedRoomIds.length > 0 ? bookedRoomIds : [0];
 
     const availableRooms = await prisma.room.groupBy({
       by: ["type"],
       where: {
         NOT: {
-          id: { in: bookedRoomIds },
+          id: { in: notInCondition },
         },
-        ...(roomType && { type: roomType as RoomType }),
+        ...(roomType && { type: roomType }),
         ...(guests && { capacity: { gte: guests } }),
         isAvailable: true,
       },
@@ -117,7 +148,7 @@ export const roomService = {
           where: {
             type: group.type,
             NOT: {
-              id: { in: bookedRoomIds },
+              id: { in: notInCondition },
             },
             ...(guests && { capacity: { gte: guests } }),
             isAvailable: true,
