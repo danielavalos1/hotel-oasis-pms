@@ -11,7 +11,8 @@
     "start": "next start",
     "lint": "next lint",
     "db:seed": "tsx scripts/seedDatabase.ts",
-    "heroku-postbuild": "prisma migrate deploy"
+    "heroku-postbuild": "prisma migrate deploy",
+    "postinstall": "next build"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
