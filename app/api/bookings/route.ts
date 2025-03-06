@@ -3,6 +3,7 @@ import { bookingService } from "@/services/bookingService";
 import { ZodError } from "zod";
 import { Prisma } from "@prisma/client";
 import { emailService } from "@/services/emailService";
+import { BookingRoomInput } from "@/lib/validations/booking";
 
 export async function GET(request: NextRequest) {
   try {
@@ -32,6 +33,36 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     console.log("[API] Create Booking - Request body:", body);
+
+    // Validar que el cuerpo incluya la propiedad rooms como un array
+    if (!body.rooms || !Array.isArray(body.rooms) || body.rooms.length === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Validation error",
+          details: "Al menos una habitación debe ser especificada",
+        },
+        { status: 400 }
+      );
+    }
+
+    // Asegurarse de que cada elemento tenga un roomId y priceAtTime
+    if (
+      body.rooms.some(
+        (room: Partial<BookingRoomInput>) =>
+          !room.roomId || typeof room.priceAtTime !== "number"
+      )
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Validation error",
+          details:
+            "Todas las habitaciones deben tener un roomId y priceAtTime válidos",
+        },
+        { status: 400 }
+      );
+    }
 
     const booking = await bookingService.createBooking(body);
     console.log("[API] Create Booking - Success:", booking);
@@ -75,7 +106,7 @@ export async function POST(request: NextRequest) {
             {
               success: false,
               error: "Unique constraint violation",
-              details: `A booking already exists for this room and date range`,
+              details: `Una o más habitaciones ya están reservadas para este rango de fechas`,
             },
             { status: 409 }
           );
@@ -84,7 +115,7 @@ export async function POST(request: NextRequest) {
             {
               success: false,
               error: "Foreign key constraint failed",
-              details: "The specified guest or room does not exist",
+              details: "El huésped o alguna habitación especificada no existe",
             },
             { status: 400 }
           );
