@@ -7,12 +7,11 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "db:seed": "tsx scripts/seedDatabase.ts",
-    "heroku-postbuild": "prisma migrate deploy",
-    "postinstall": "next build"
+    "heroku-postbuild": "prisma generate && prisma migrate deploy && next build"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
