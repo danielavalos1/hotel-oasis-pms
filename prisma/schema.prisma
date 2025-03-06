@@ -28,7 +28,7 @@ model Room {
   amenities     String[]       @default([])
   pricePerNight Decimal        @db.Decimal(10, 2)
   isAvailable   Boolean        @default(true)
-  bookings      Booking[]
+  bookingRooms  BookingRoom[] // Cambiado de bookings a bookingRooms
   roomInventory RoomInventory?
   channelRates  ChannelRate[]
 }
@@ -45,14 +45,13 @@ enum RoomType {
 model Booking {
   id             Int                   @id @default(autoincrement())
   guestId        Int
-  roomId         Int
   checkInDate    DateTime              @db.Date
   checkOutDate   DateTime              @db.Date
   totalPrice     Decimal               @db.Decimal(10, 2)
   status         String
   numberOfGuests Int                   @default(1)
   guest          Guest                 @relation(fields: [guestId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  room           Room                  @relation(fields: [roomId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  bookingRooms   BookingRoom[] // Nueva relación a través de BookingRoom
   payments       Payment[]
   modifications  BookingModification[]
 }
@@ -126,4 +125,16 @@ model BookingModification {
   modificationDate    DateTime @db.Date
   modificationDetails String
   booking             Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+}
+
+// Nuevo modelo para manejar la relación muchos a muchos entre Booking y Room
+model BookingRoom {
+  id          Int     @id @default(autoincrement())
+  bookingId   Int
+  roomId      Int
+  priceAtTime Decimal @db.Decimal(10, 2) // Precio de la habitación al momento de la reserva
+  booking     Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  room        Room    @relation(fields: [roomId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([bookingId, roomId]) // Asegura que no haya duplicados
 }
