@@ -44,32 +44,49 @@ export const bookingService = {
         }
       }
 
-      return await tx.booking.create({
+      // Crear la reserva
+      const booking = await tx.booking.create({
         data: {
           guestId,
-          roomId: validatedData.roomId,
           checkInDate: validatedData.checkInDate,
           checkOutDate: validatedData.checkOutDate,
           totalPrice: validatedData.totalPrice,
           status: validatedData.status,
           numberOfGuests: validatedData.numberOfGuests || 1,
+          // Crear las relaciones de BookingRoom
+          bookingRooms: {
+            create: validatedData.rooms.map((room) => ({
+              roomId: room.roomId,
+              priceAtTime: room.priceAtTime,
+            })),
+          },
         },
         include: {
           guest: true,
-          room: true,
+          bookingRooms: {
+            include: {
+              room: true,
+            },
+          },
         },
       });
+
+      return booking;
     });
   },
 
   // Read
-  async getBooking(id: number): Promise<Booking | null> {
+  async getBooking(id: number) {
     try {
       return await prisma.booking.findUnique({
         where: { id },
         include: {
           guest: true,
-          room: true,
+          bookingRooms: {
+            include: {
+              room: true,
+            },
+          },
           payments: true,
           modifications: true,
         },
@@ -79,12 +96,16 @@ export const bookingService = {
     }
   },
 
-  async getAllBookings(): Promise<Booking[]> {
+  async getAllBookings() {
     try {
       return await prisma.booking.findMany({
         include: {
           guest: true,
-          room: true,
+          bookingRooms: {
+            include: {
+              room: true,
+            },
+          },
         },
       });
     } catch (error) {
@@ -92,10 +113,7 @@ export const bookingService = {
     }
   },
 
-  async getBookingsByDateRange(
-    startDate: Date,
-    endDate: Date
-  ): Promise<Booking[]> {
+  async getBookingsByDateRange(startDate: Date, endDate: Date) {
     try {
       return await prisma.booking.findMany({
         where: {
@@ -116,7 +134,11 @@ export const bookingService = {
         },
         include: {
           guest: true,
-          room: true,
+          bookingRooms: {
+            include: {
+              room: true,
+            },
+          },
         },
       });
     } catch (error) {
@@ -125,14 +147,18 @@ export const bookingService = {
   },
 
   // Update
-  async updateBooking(id: number, data: Partial<Booking>): Promise<Booking> {
+  async updateBooking(id: number, data: Partial<Booking>) {
     try {
       return await prisma.booking.update({
         where: { id },
         data,
         include: {
           guest: true,
-          room: true,
+          bookingRooms: {
+            include: {
+              room: true,
+            },
+          },
         },
       });
     } catch (error) {
