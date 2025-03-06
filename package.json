@@ -7,10 +7,11 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
-    "db:seed": "tsx scripts/seedDatabase.ts"
+    "db:seed": "tsx scripts/seedDatabase.ts",
+    "heroku-postbuild": "prisma migrate deploy"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -79,5 +80,8 @@
     "tailwindcss": "^3.4.17",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3"
+  },
+  "engines": {
+    "node": ">=16.x"
   }
 }
