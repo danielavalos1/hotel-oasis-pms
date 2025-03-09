@@ -3,7 +3,13 @@ import { bookingService } from "@/services/bookingService";
 import { ZodError } from "zod";
 import { Prisma } from "@prisma/client";
 import { emailService } from "@/services/emailService";
-import { BookingRoomInput } from "@/lib/validations/booking";
+import { roomService } from "@/services/roomService";
+import { RoomType } from "@prisma/client";
+
+interface RoomTypeRequest {
+  roomType: RoomType;
+  quantity: number;
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -46,11 +52,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Asegurarse de que cada elemento tenga un roomId y priceAtTime
+    // Validar el nuevo formato de rooms
     if (
       body.rooms.some(
-        (room: Partial<BookingRoomInput>) =>
-          !room.roomId || typeof room.priceAtTime !== "number"
+        (room: RoomTypeRequest) =>
+          !room.roomType ||
+          typeof room.quantity !== "number" ||
+          room.quantity < 1
       )
     ) {
       return NextResponse.json(
@@ -58,14 +66,61 @@ export async function POST(request: NextRequest) {
           success: false,
           error: "Validation error",
           details:
-            "Todas las habitaciones deben tener un roomId y priceAtTime válidos",
+            "Todas las habitaciones deben tener un tipo y cantidad válidos",
         },
         { status: 400 }
       );
     }
 
+    // Buscar habitaciones disponibles para cada tipo
+    const availableRoomsPromises = body.rooms.map(
+      async (roomRequest: RoomTypeRequest) => {
+        console.log(
+          "[API] Buscando habitaciones disponibles para:",
+          roomRequest
+        );
+
+        // Obtener la lista completa de habitaciones disponibles para este tipo
+        const availableRoomsList = await roomService.getAvailableRoomListByType(
+          {
+            checkIn: new Date(body.checkInDate),
+            checkOut: new Date(body.checkOutDate),
+            roomType: roomRequest.roomType,
+          }
+        );
+
+        console.log(
+          "[API] Lista completa de habitaciones disponibles:",
+          availableRoomsList
+        );
+
+        if (availableRoomsList.length < roomRequest.quantity) {
+          throw new Error(
+            `No hay suficientes habitaciones disponibles del tipo ${roomRequest.roomType}. ` +
+              `Solicitadas: ${roomRequest.quantity}, Disponibles: ${availableRoomsList.length}`
+          );
+        }
+
+        // Tomar las primeras n habitaciones disponibles
+        return availableRoomsList
+          .slice(0, roomRequest.quantity)
+          .map((room) => ({
+            roomId: room.id,
+            priceAtTime: room.pricePerNight,
+          }));
+      }
+    );
+
+    // Esperar todas las promesas y aplanar el array
+    const assignedRooms = (await Promise.all(availableRoomsPromises)).flat();
+    console.log("[API] Todas las habitaciones asignadas:", assignedRooms);
+
+    // Actualizar el body con las habitaciones asignadas
+    body.rooms = assignedRooms;
+    console.log("[API] Body actualizado antes de crear booking:", body);
+
     const booking = await bookingService.createBooking(body);
-    console.log("[API] Create Booking - Success:", booking);
+    console.log("[API] Booking creado exitosamente:", booking);
 
     // Enviar correos electrónicos
     try {
