@@ -69,6 +69,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    console.log(
+      "[API] Available Rooms - Response data:",
+      JSON.stringify(availableRooms, null, 2)
+    );
+
     return NextResponse.json({ success: true, data: availableRooms });
   } catch (error) {
     // Handle outer try-catch with robust error checking
