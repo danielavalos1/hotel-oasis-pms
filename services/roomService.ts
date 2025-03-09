@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { Room, Prisma } from "@prisma/client";
+import { Room, Prisma, RoomType } from "@prisma/client";
 import { AvailableRoomsByType, RoomAvailabilityParams } from "@/types/room";
 
 export const roomService = {
@@ -169,13 +169,81 @@ export const roomService = {
 
         return {
           ...roomExample,
-          pricePerNight: roomExample.pricePerNight.toNumber(),
+          pricePerNight: roomExample.pricePerNight,
           availableCount: group._count.id,
         } as AvailableRoomsByType;
       })
     );
 
     return roomsWithDetails;
+  },
+
+  async getAvailableRoomListByType({
+    checkIn,
+    checkOut,
+    roomType,
+  }: {
+    checkIn: Date;
+    checkOut: Date;
+    roomType: RoomType;
+  }): Promise<Room[]> {
+    // Find bookings that overlap with the requested dates
+    const bookings = await prisma.booking.findMany({
+      where: {
+        OR: [
+          {
+            AND: [
+              { checkInDate: { lte: checkIn } },
+              { checkOutDate: { gt: checkIn } },
+            ],
+          },
+          {
+            AND: [
+              { checkInDate: { lt: checkOut } },
+              { checkOutDate: { gte: checkOut } },
+            ],
+          },
+          {
+            AND: [
+              { checkInDate: { gte: checkIn } },
+              { checkOutDate: { lte: checkOut } },
+            ],
+          },
+        ],
+      },
+      include: {
+        bookingRooms: {
+          select: {
+            roomId: true,
+          },
+        },
+      },
+    });
+
+    // Extract booked room IDs
+    const bookedRoomIds = bookings
+      .flatMap((booking) => booking.bookingRooms)
+      .map((bookingRoom) => bookingRoom.roomId);
+
+    // Get all available rooms of the specified type
+    const rooms = await prisma.room.findMany({
+      where: {
+        type: roomType,
+        NOT: {
+          id: { in: bookedRoomIds.length > 0 ? bookedRoomIds : [0] },
+        },
+        isAvailable: true,
+      },
+      orderBy: {
+        roomNumber: "asc",
+      },
+    });
+
+    // Convertir el Decimal a number antes de retornar
+    return rooms.map((room) => ({
+      ...room,
+      pricePerNight: room.pricePerNight,
+    }));
   },
 
   async updateRoom(id: number, data: Partial<Room>): Promise<Room> {
