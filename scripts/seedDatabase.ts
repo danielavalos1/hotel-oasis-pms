@@ -170,7 +170,6 @@ async function main() {
       capacity: 4,
       description: "Suite de lujo con jacuzzi y sala de estar",
       amenities: [
-        'TV 65"',
         "Aire acondicionado",
         "Baño privado",
         "WiFi gratuito",
