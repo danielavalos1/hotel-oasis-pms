@@ -64,9 +64,11 @@ export const emailService = {
         🏠 ${count} × Habitación ${type}
         <div style="margin-left: 20px; font-size: 14px; color: #4a5568;">
           <div>Precio por noche: $${price.toFixed(2)}</div>
-          <div>Subtotal por ${nights} noches: $${(price * nights).toFixed(
-          2
-        )}</div>
+          <div>Subtotal por ${nights} noches: $${(
+          price *
+          nights *
+          count
+        ).toFixed(2)}</div>
         </div>
       </li>
     `
@@ -190,9 +192,11 @@ export const emailService = {
         <div style="font-weight: bold;">🏠 ${count} × Habitación ${type}</div>
         <div style="margin-left: 20px; font-size: 14px;">
           <div>Precio por noche: $${price.toFixed(2)}</div>
-          <div>Subtotal por ${nights} noches: $${(price * nights).toFixed(
-          2
-        )}</div>
+          <div>Subtotal por ${nights} noches: $${(
+          price *
+          nights *
+          count
+        ).toFixed(2)}</div>
           <div style="color: #4a5568; font-size: 12px; margin-top: 5px;">
             IDs de habitaciones posibles: ${roomIds.join(", ")}
           </div>
