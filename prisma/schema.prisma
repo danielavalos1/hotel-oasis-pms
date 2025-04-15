@@ -70,12 +70,75 @@ enum UserRole {
 }
 
 model User {
-  id           Int      @id @default(autoincrement())
-  username     String   @unique
-  name         String
-  passwordHash String
-  email        String   @unique
-  role         UserRole @default(RECEPTIONIST)
+  id              Int              @id @default(autoincrement())
+  username        String           @unique
+  name            String
+  lastName        String?
+  passwordHash    String
+  email           String           @unique
+  role            UserRole         @default(RECEPTIONIST)
+  departmentId    Int?
+  position        String?
+  hireDate        DateTime?        @db.Date
+  status          EmployeeStatus   @default(ACTIVE)
+  department      Department?      @relation(fields: [departmentId], references: [id])
+  attendance      Attendance[]
+  schedules       Schedule[]
+  documents       EmployeeDocument[]
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+  ON_LEAVE
+  TERMINATED
+}
+
+model Department {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  users       User[]
+}
+
+model Attendance {
+  id              Int       @id @default(autoincrement())
+  userId          Int
+  checkInTime     DateTime
+  checkOutTime    DateTime?
+  date            DateTime  @db.Date
+  status          AttendanceStatus
+  notes           String?
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  HALF_DAY
+  ON_LEAVE
+}
+
+model Schedule {
+  id              Int       @id @default(autoincrement())
+  userId          Int
+  startTime       DateTime
+  endTime         DateTime
+  dayOfWeek       Int       // 0-6, Sunday-Saturday
+  isRecurring     Boolean   @default(true)
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+}
+
+model EmployeeDocument {
+  id              Int       @id @default(autoincrement())
+  userId          Int
+  documentType    String
+  documentName    String
+  documentUrl     String
+  uploadDate      DateTime  @default(now())
+  expiryDate      DateTime?
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 }
 
 model RoomInventory {

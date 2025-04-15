@@ -15,6 +15,12 @@ async function main() {
       role: UserRole.SUPERADMIN,
     },
     {
+      username: "admin2",
+      name: "Administrator 2",
+      email: "d@test.com",
+      role: UserRole.ADMIN,
+    },
+    {
       username: "receptionist1",
       name: "John Doe",
       email: "receptionist@test.com",
@@ -29,8 +35,10 @@ async function main() {
   ];
 
   for (const user of users) {
-    await prisma.user.create({
-      data: {
+    await prisma.user.upsert({
+      where: { username: user.username },
+      update: {},
+      create: {
         ...user,
         passwordHash: hashedPassword,
       },
