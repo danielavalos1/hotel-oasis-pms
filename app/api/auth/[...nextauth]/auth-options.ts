@@ -18,41 +18,40 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+        console.log("[AUTH] Intentando login con:", credentials);
+        if (!credentials?.email || !credentials?.password) {
+          console.log("[AUTH] Faltan credenciales");
+          return null;
+        }
 
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
-          include: {
-            role: {
-              include: {
-                permissions: {
-                  include: {
-                    permission: true,
-                  },
-                },
-              },
-            },
-          },
         });
 
-        if (!user) return null;
+        if (!user) {
+          console.log("[AUTH] Usuario no encontrado:", credentials.email);
+          return null;
+        }
 
         const isPasswordValid = await bcrypt.compare(
           credentials.password,
           user.passwordHash
         );
 
-        if (!isPasswordValid) return null;
+        if (!isPasswordValid) {
+          console.log("[AUTH] Contraseña incorrecta para:", credentials.email);
+          return null;
+        }
 
-        return {
-          id: user.id.toString(),
+        // Ajuste de tipado para el nuevo modelo
+        const result = {
+          id: String(user.id),
           email: user.email,
           username: user.username,
-          role: user.role?.roleName || "",
-          permissions:
-            user.role?.permissions.map((p) => p.permission.permissionName) ||
-            [],
+          role: user.role || "",
         };
+        console.log("[AUTH] Login exitoso:", result);
+        return result;
       },
     }),
   ],
@@ -62,20 +61,21 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
+        console.log("[AUTH] jwt callback user:", user);
         token.id = user.id;
         token.username = user.username;
         token.role = user.role;
-        token.permissions = user.permissions;
       }
       return token;
     },
     async session({ session, token }) {
+      console.log("[AUTH] session callback token:", token);
       if (session.user) {
         session.user.id = token.id as string;
         session.user.username = token.username as string;
         session.user.role = token.role as string;
-        session.user.permissions = token.permissions as string[];
       }
+      console.log("[AUTH] session callback session:", session);
       return session;
     },
   },
