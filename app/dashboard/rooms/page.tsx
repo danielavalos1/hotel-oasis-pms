@@ -20,13 +20,12 @@ export default function RoomsPage() {
   const [typeFilter, setTypeFilter] = useState("all");
 
   return (
-    <div>
+    <div className="w-full max-w-screen-xl mx-auto px-2 sm:px-4 md:px-6 py-4">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
         <h2 className="text-3xl font-bold tracking-tight">Habitaciones</h2>
-        
         <Dialog open={isNewRoomOpen} onOpenChange={setIsNewRoomOpen}>
           <DialogTrigger asChild>
-            <Button className="inline-flex items-center">
+            <Button className="inline-flex items-center w-full sm:w-auto">
               <Plus className="mr-2 h-4 w-4" />
               Nueva Habitación
             </Button>
@@ -40,21 +39,20 @@ export default function RoomsPage() {
         </Dialog>
       </div>
 
-      <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-4">
-        <div className="relative flex-1 md:max-w-sm">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 mb-4 w-full">
+        <div className="relative flex-1 min-w-0 max-w-full sm:max-w-sm">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             type="search"
             placeholder="Buscar habitación por número o características..."
-            className="pl-8"
+            className="pl-8 w-full"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        
-        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+        <div className="flex flex-row flex-wrap gap-2 w-full sm:w-auto overflow-x-auto">
           <Select value={floorFilter} onValueChange={setFloorFilter}>
-            <SelectTrigger className="w-[130px]">
+            <SelectTrigger className="w-[110px] min-w-[90px]">
               <SelectValue placeholder="Piso" />
             </SelectTrigger>
             <SelectContent>
@@ -65,9 +63,8 @@ export default function RoomsPage() {
               <SelectItem value="4">Piso 4</SelectItem>
             </SelectContent>
           </Select>
-          
           <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="w-[160px]">
+            <SelectTrigger className="w-[130px] min-w-[110px]">
               <SelectValue placeholder="Tipo" />
             </SelectTrigger>
             <SelectContent>
@@ -78,8 +75,7 @@ export default function RoomsPage() {
               <SelectItem value="presidential">Presidencial</SelectItem>
             </SelectContent>
           </Select>
-
-          <Button variant="ghost" size="sm" onClick={() => {
+          <Button variant="ghost" size="sm" className="shrink-0" onClick={() => {
             setFloorFilter("all");
             setTypeFilter("all");
             setSearchQuery("");
@@ -89,19 +85,19 @@ export default function RoomsPage() {
         </div>
       </div>
 
-      <Card className="transition-all hover:shadow-md">
-        <CardHeader className="px-6 py-4">
-          <div className="flex items-center justify-between">
+      <Card className="transition-all hover:shadow-md overflow-x-auto">
+        <CardHeader className="px-4 sm:px-6 py-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4">
             <CardTitle className="text-lg">Habitaciones del Hotel</CardTitle>
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-auto">
-              <TabsList className="grid grid-cols-2 w-[180px]">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full sm:w-auto">
+              <TabsList className="grid grid-cols-2 w-full sm:w-[180px]">
                 <TabsTrigger value="list">Lista</TabsTrigger>
                 <TabsTrigger value="grid">Cuadrícula</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
           <TabsContent value="list" className="mt-0 p-0">
             <RoomsList 
               searchQuery={searchQuery}
