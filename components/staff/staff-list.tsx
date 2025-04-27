@@ -18,7 +18,6 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -41,7 +40,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
-  Plus,
   Edit,
   FileText,
   MoreHorizontal,
@@ -50,6 +48,7 @@ import {
   Calendar,
   ClipboardList,
   UserPlus,
+  Key,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow, format } from "date-fns";
@@ -65,7 +64,13 @@ import {
 } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 // Tipos
 type Department = {
@@ -151,11 +156,11 @@ interface StaffListProps {
   onStaffUpdated?: () => Promise<void>;
 }
 
-export function StaffList({ 
-  staffList, 
-  departments, 
-  onStaffAdded, 
-  onStaffUpdated 
+export function StaffList({
+  staffList,
+  departments,
+  onStaffAdded,
+  onStaffUpdated,
 }: StaffListProps) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -165,6 +170,24 @@ export function StaffList({
   const [itemsPerPage] = useState(8);
   const [detailsTab, setDetailsTab] = useState<string>("attendance");
   const [loadingDetails, setLoadingDetails] = useState(false);
+
+  // Reset password handler
+  const handleResetPassword = async (staffId: number) => {
+    try {
+      const response = await fetch(`/api/staff/${staffId}/reset-password`, {
+        method: "POST",
+      });
+      const data = await response.json();
+      if (!response.ok)
+        throw new Error(
+          data.error || data.message || "Error al resetear contraseña"
+        );
+      toast.success(data.message || "Contraseña restablecida a 123456");
+      if (onStaffUpdated) await onStaffUpdated();
+    } catch (err: any) {
+      toast.error(err.message || "Error al resetear contraseña");
+    }
+  };
 
   // Pagination logic
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -194,7 +217,7 @@ export function StaffList({
       const data = await response.json();
       setCurrentStaff(data);
       setShowDetailsModal(true);
-    } catch (error) {
+    } catch {
       toast.error("Error al cargar detalles del empleado");
     } finally {
       setLoadingDetails(false);
@@ -211,7 +234,8 @@ export function StaffList({
         password: formData.get("password") as string,
         role: formData.get("role") as string,
         departmentId:
-          formData.get("departmentId") && formData.get("departmentId") !== "none"
+          formData.get("departmentId") &&
+          formData.get("departmentId") !== "none"
             ? parseInt(formData.get("departmentId") as string)
             : null,
         position: (formData.get("position") as string) || null,
@@ -260,7 +284,8 @@ export function StaffList({
         email: formData.get("email") as string,
         role: formData.get("role") as string,
         departmentId:
-          formData.get("departmentId") && formData.get("departmentId") !== "none"
+          formData.get("departmentId") &&
+          formData.get("departmentId") !== "none"
             ? parseInt(formData.get("departmentId") as string)
             : null,
         position: (formData.get("position") as string) || null,
@@ -321,7 +346,10 @@ export function StaffList({
     <>
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-4">
         <h3 className="text-lg font-semibold">Personal ({staffList.length})</h3>
-        <Button onClick={() => setShowAddModal(true)} className="md:w-auto w-full flex items-center gap-2">
+        <Button
+          onClick={() => setShowAddModal(true)}
+          className="md:w-auto w-full flex items-center gap-2"
+        >
           <UserPlus className="h-4 w-4" />
           <span className="md:inline">Nuevo Empleado</span>
         </Button>
@@ -336,7 +364,9 @@ export function StaffList({
                 <TableHead className="hidden md:table-cell">Usuario</TableHead>
                 <TableHead className="hidden md:table-cell">Email</TableHead>
                 <TableHead>Rol</TableHead>
-                <TableHead className="hidden md:table-cell">Departamento</TableHead>
+                <TableHead className="hidden md:table-cell">
+                  Departamento
+                </TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
@@ -416,9 +446,24 @@ export function StaffList({
                           <Edit className="h-4 w-4" />
                           <span className="sr-only">Editar</span>
                         </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleResetPassword(staff.id)}
+                          title="Restablecer contraseña"
+                        >
+                          <Key className="h-4 w-4" />
+                          <span className="sr-only">
+                            Restablecer contraseña
+                          </span>
+                        </Button>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon" title="Cambiar estado">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Cambiar estado"
+                            >
                               <MoreHorizontal className="h-4 w-4" />
                               <span className="sr-only">Cambiar estado</span>
                             </Button>
@@ -531,8 +576,7 @@ export function StaffList({
               })
               .map((page, idx, array) => {
                 // If there's a gap in the sequence, render an ellipsis
-                const showEllipsisBefore =
-                  idx > 0 && page > array[idx - 1] + 1;
+                const showEllipsisBefore = idx > 0 && page > array[idx - 1] + 1;
                 const showEllipsisAfter =
                   idx < array.length - 1 && page < array[idx + 1] - 1;
 
@@ -572,7 +616,9 @@ export function StaffList({
                   paginate(currentPage + 1);
                 }}
                 className={
-                  currentPage === totalPages ? "pointer-events-none opacity-50" : ""
+                  currentPage === totalPages
+                    ? "pointer-events-none opacity-50"
+                    : ""
                 }
               />
             </PaginationItem>
@@ -590,7 +636,13 @@ export function StaffList({
             </DialogDescription>
           </DialogHeader>
 
-          <form action={handleCreateStaff} className="space-y-4">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleCreateStaff(new FormData(e.currentTarget));
+            }}
+            className="space-y-4"
+          >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="username">Usuario*</Label>
@@ -645,9 +697,7 @@ export function StaffList({
                   <SelectContent>
                     <SelectItem value="ADMIN">Administrador</SelectItem>
                     <SelectItem value="STAFF">Staff</SelectItem>
-                    <SelectItem value="RECEPTIONIST">
-                      Recepcionista
-                    </SelectItem>
+                    <SelectItem value="RECEPTIONIST">Recepcionista</SelectItem>
                     <SelectItem value="HOUSEKEEPING">Limpieza</SelectItem>
                     <SelectItem value="MAINTENANCE">Mantenimiento</SelectItem>
                   </SelectContent>
@@ -714,7 +764,13 @@ export function StaffList({
           </DialogHeader>
 
           {currentStaff && (
-            <form action={handleUpdateStaff} className="space-y-4">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleUpdateStaff(new FormData(e.currentTarget));
+              }}
+              className="space-y-4"
+            >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="edit-name">Nombre*</Label>
@@ -856,291 +912,307 @@ export function StaffList({
                 <Skeleton className="h-32 w-full" />
               </div>
             </div>
-          ) : currentStaff && (
-            <div className="space-y-6">
-              <div className="flex flex-col md:flex-row gap-6">
-                <div className="flex-1">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10">
-                          <AvatarFallback>
-                            {currentStaff.name.charAt(0)}
-                            {currentStaff.lastName?.charAt(0) || ""}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span>
-                          {currentStaff.name} {currentStaff.lastName || ""}
-                        </span>
-                      </CardTitle>
-                      <CardDescription>
-                        {roleMapping[currentStaff.role] || currentStaff.role} -{" "}
-                        {currentStaff.position || "Sin puesto asignado"}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge
-                          variant={
-                            statusMapping[currentStaff.status]?.variant ||
-                            "secondary"
-                          }
-                        >
-                          {statusMapping[currentStaff.status]?.label ||
-                            currentStaff.status}
-                        </Badge>
-                        {currentStaff.department && (
-                          <Badge variant="outline">
-                            {currentStaff.department.name}
+          ) : (
+            currentStaff && (
+              <div className="space-y-6">
+                <div className="flex flex-col md:flex-row gap-6">
+                  <div className="flex-1">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-3">
+                          <Avatar className="h-10 w-10">
+                            <AvatarFallback>
+                              {currentStaff.name.charAt(0)}
+                              {currentStaff.lastName?.charAt(0) || ""}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span>
+                            {currentStaff.name} {currentStaff.lastName || ""}
+                          </span>
+                        </CardTitle>
+                        <CardDescription>
+                          {roleMapping[currentStaff.role] || currentStaff.role}{" "}
+                          - {currentStaff.position || "Sin puesto asignado"}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge
+                            variant={
+                              statusMapping[currentStaff.status]?.variant ||
+                              "secondary"
+                            }
+                          >
+                            {statusMapping[currentStaff.status]?.label ||
+                              currentStaff.status}
                           </Badge>
-                        )}
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">Email:</span>
-                          <span className="text-sm break-all">
-                            {currentStaff.email}
-                          </span>
+                          {currentStaff.department && (
+                            <Badge variant="outline">
+                              {currentStaff.department.name}
+                            </Badge>
+                          )}
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">Usuario:</span>
-                          <span className="text-sm">
-                            {currentStaff.username}
-                          </span>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">Email:</span>
+                            <span className="text-sm break-all">
+                              {currentStaff.email}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">
+                              Usuario:
+                            </span>
+                            <span className="text-sm">
+                              {currentStaff.username}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                      {currentStaff.hireDate && (
-                        <div className="flex items-center gap-2 pt-2">
-                          <span className="text-sm font-medium">Contratado:</span>
-                          <span className="text-sm">
-                            {format(new Date(currentStaff.hireDate), "PP", {
-                              locale: es,
-                            })}
-                            {" - "}
-                            {formatDistanceToNow(
-                              new Date(currentStaff.hireDate),
-                              {
-                                addSuffix: true,
+                        {currentStaff.hireDate && (
+                          <div className="flex items-center gap-2 pt-2">
+                            <span className="text-sm font-medium">
+                              Contratado:
+                            </span>
+                            <span className="text-sm">
+                              {format(new Date(currentStaff.hireDate), "PP", {
                                 locale: es,
-                              }
-                            )}
-                          </span>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-
-              <Tabs
-                value={detailsTab}
-                onValueChange={setDetailsTab}
-                className="w-full"
-              >
-                <TabsList className="grid grid-cols-3 w-full">
-                  <TabsTrigger value="attendance">Asistencia</TabsTrigger>
-                  <TabsTrigger value="schedules">Horarios</TabsTrigger>
-                  <TabsTrigger value="documents">Documentos</TabsTrigger>
-                </TabsList>
-
-                <TabsContent
-                  value="attendance"
-                  className="border rounded-md p-4 mt-2"
-                >
-                  {currentStaff.attendance &&
-                  currentStaff.attendance.length > 0 ? (
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Fecha</TableHead>
-                            <TableHead>Estado</TableHead>
-                            <TableHead>Entrada</TableHead>
-                            <TableHead>Salida</TableHead>
-                            <TableHead>Notas</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {currentStaff.attendance.map((record) => (
-                            <TableRow key={record.id}>
-                              <TableCell>
-                                {format(new Date(record.date), "PP", {
-                                  locale: es,
-                                })}
-                              </TableCell>
-                              <TableCell>
-                                <Badge
-                                  variant={
-                                    record.status === "PRESENT"
-                                      ? "success"
-                                      : record.status === "ABSENT"
-                                      ? "destructive"
-                                      : "secondary"
-                                  }
-                                >
-                                  {record.status === "PRESENT"
-                                    ? "Presente"
-                                    : record.status === "ABSENT"
-                                    ? "Ausente"
-                                    : record.status === "LATE"
-                                    ? "Tarde"
-                                    : record.status}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                {format(new Date(record.checkInTime), "HH:mm")}
-                              </TableCell>
-                              <TableCell>
-                                {record.checkOutTime
-                                  ? format(
-                                      new Date(record.checkOutTime),
-                                      "HH:mm"
-                                    )
-                                  : "-"}
-                              </TableCell>
-                              <TableCell>{record.notes || "-"}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  ) : (
-                    <p className="text-center py-4 text-muted-foreground">
-                      No hay registros de asistencia.
-                    </p>
-                  )}
-                </TabsContent>
-
-                <TabsContent
-                  value="schedules"
-                  className="border rounded-md p-4 mt-2"
-                >
-                  {currentStaff.schedules &&
-                  currentStaff.schedules.length > 0 ? (
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Día</TableHead>
-                            <TableHead>Hora inicio</TableHead>
-                            <TableHead>Hora fin</TableHead>
-                            <TableHead>Recurrente</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {currentStaff.schedules.map((schedule) => (
-                            <TableRow key={schedule.id}>
-                              <TableCell>
+                              })}
+                              {" - "}
+                              {formatDistanceToNow(
+                                new Date(currentStaff.hireDate),
                                 {
-                                  [
-                                    "Domingo",
-                                    "Lunes",
-                                    "Martes",
-                                    "Miércoles",
-                                    "Jueves",
-                                    "Viernes",
-                                    "Sábado",
-                                  ][schedule.dayOfWeek]
-                                }
-                              </TableCell>
-                              <TableCell>
-                                {format(new Date(schedule.startTime), "HH:mm")}
-                              </TableCell>
-                              <TableCell>
-                                {format(new Date(schedule.endTime), "HH:mm")}
-                              </TableCell>
-                              <TableCell>
-                                {schedule.isRecurring ? "Sí" : "No"}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  ) : (
-                    <p className="text-center py-4 text-muted-foreground">
-                      No hay horarios asignados.
-                    </p>
-                  )}
-                </TabsContent>
-
-                <TabsContent
-                  value="documents"
-                  className="border rounded-md p-4 mt-2"
-                >
-                  {currentStaff.documents &&
-                  currentStaff.documents.length > 0 ? (
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Tipo</TableHead>
-                            <TableHead>Nombre</TableHead>
-                            <TableHead>Fecha carga</TableHead>
-                            <TableHead>Fecha expiración</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {currentStaff.documents.map((document) => (
-                            <TableRow key={document.id}>
-                              <TableCell>{document.documentType}</TableCell>
-                              <TableCell>
-                                <a
-                                  href={document.documentUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-primary hover:underline"
-                                >
-                                  {document.documentName}
-                                </a>
-                              </TableCell>
-                              <TableCell>
-                                {format(new Date(document.uploadDate), "PP", {
+                                  addSuffix: true,
                                   locale: es,
-                                })}
-                              </TableCell>
-                              <TableCell>
-                                {document.expiryDate
-                                  ? format(new Date(document.expiryDate), "PP", {
-                                      locale: es,
-                                    })
-                                  : "-"}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  ) : (
-                    <p className="text-center py-4 text-muted-foreground">
-                      No hay documentos asociados.
-                    </p>
-                  )}
-                </TabsContent>
-              </Tabs>
+                                }
+                              )}
+                            </span>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+                </div>
 
-              <DialogFooter>
-                <Button 
-                  onClick={() => {
-                    setShowDetailsModal(false);
-                    setCurrentStaff(null);
-                  }}
-                  variant="outline"
+                <Tabs
+                  value={detailsTab}
+                  onValueChange={setDetailsTab}
+                  className="w-full"
                 >
-                  Cerrar
-                </Button>
-                <Button
-                  onClick={() => {
-                    if (currentStaff) {
+                  <TabsList className="grid grid-cols-3 w-full">
+                    <TabsTrigger value="attendance">Asistencia</TabsTrigger>
+                    <TabsTrigger value="schedules">Horarios</TabsTrigger>
+                    <TabsTrigger value="documents">Documentos</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent
+                    value="attendance"
+                    className="border rounded-md p-4 mt-2"
+                  >
+                    {currentStaff.attendance &&
+                    currentStaff.attendance.length > 0 ? (
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Fecha</TableHead>
+                              <TableHead>Estado</TableHead>
+                              <TableHead>Entrada</TableHead>
+                              <TableHead>Salida</TableHead>
+                              <TableHead>Notas</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {currentStaff.attendance.map((record) => (
+                              <TableRow key={record.id}>
+                                <TableCell>
+                                  {format(new Date(record.date), "PP", {
+                                    locale: es,
+                                  })}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge
+                                    variant={
+                                      record.status === "PRESENT"
+                                        ? "success"
+                                        : record.status === "ABSENT"
+                                        ? "destructive"
+                                        : "secondary"
+                                    }
+                                  >
+                                    {record.status === "PRESENT"
+                                      ? "Presente"
+                                      : record.status === "ABSENT"
+                                      ? "Ausente"
+                                      : record.status === "LATE"
+                                      ? "Tarde"
+                                      : record.status}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  {format(
+                                    new Date(record.checkInTime),
+                                    "HH:mm"
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {record.checkOutTime
+                                    ? format(
+                                        new Date(record.checkOutTime),
+                                        "HH:mm"
+                                      )
+                                    : "-"}
+                                </TableCell>
+                                <TableCell>{record.notes || "-"}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    ) : (
+                      <p className="text-center py-4 text-muted-foreground">
+                        No hay registros de asistencia.
+                      </p>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent
+                    value="schedules"
+                    className="border rounded-md p-4 mt-2"
+                  >
+                    {currentStaff.schedules &&
+                    currentStaff.schedules.length > 0 ? (
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Día</TableHead>
+                              <TableHead>Hora inicio</TableHead>
+                              <TableHead>Hora fin</TableHead>
+                              <TableHead>Recurrente</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {currentStaff.schedules.map((schedule) => (
+                              <TableRow key={schedule.id}>
+                                <TableCell>
+                                  {
+                                    [
+                                      "Domingo",
+                                      "Lunes",
+                                      "Martes",
+                                      "Miércoles",
+                                      "Jueves",
+                                      "Viernes",
+                                      "Sábado",
+                                    ][schedule.dayOfWeek]
+                                  }
+                                </TableCell>
+                                <TableCell>
+                                  {format(
+                                    new Date(schedule.startTime),
+                                    "HH:mm"
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {format(new Date(schedule.endTime), "HH:mm")}
+                                </TableCell>
+                                <TableCell>
+                                  {schedule.isRecurring ? "Sí" : "No"}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    ) : (
+                      <p className="text-center py-4 text-muted-foreground">
+                        No hay horarios asignados.
+                      </p>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent
+                    value="documents"
+                    className="border rounded-md p-4 mt-2"
+                  >
+                    {currentStaff.documents &&
+                    currentStaff.documents.length > 0 ? (
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Tipo</TableHead>
+                              <TableHead>Nombre</TableHead>
+                              <TableHead>Fecha carga</TableHead>
+                              <TableHead>Fecha expiración</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {currentStaff.documents.map((document) => (
+                              <TableRow key={document.id}>
+                                <TableCell>{document.documentType}</TableCell>
+                                <TableCell>
+                                  <a
+                                    href={document.documentUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-primary hover:underline"
+                                  >
+                                    {document.documentName}
+                                  </a>
+                                </TableCell>
+                                <TableCell>
+                                  {format(new Date(document.uploadDate), "PP", {
+                                    locale: es,
+                                  })}
+                                </TableCell>
+                                <TableCell>
+                                  {document.expiryDate
+                                    ? format(
+                                        new Date(document.expiryDate),
+                                        "PP",
+                                        {
+                                          locale: es,
+                                        }
+                                      )
+                                    : "-"}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    ) : (
+                      <p className="text-center py-4 text-muted-foreground">
+                        No hay documentos asociados.
+                      </p>
+                    )}
+                  </TabsContent>
+                </Tabs>
+
+                <DialogFooter>
+                  <Button
+                    onClick={() => {
                       setShowDetailsModal(false);
-                      setShowEditModal(true);
-                    }
-                  }}
-                >
-                  Editar Empleado
-                </Button>
-              </DialogFooter>
-            </div>
+                      setCurrentStaff(null);
+                    }}
+                    variant="outline"
+                  >
+                    Cerrar
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      if (currentStaff) {
+                        setShowDetailsModal(false);
+                        setShowEditModal(true);
+                      }
+                    }}
+                  >
+                    Editar Empleado
+                  </Button>
+                </DialogFooter>
+              </div>
+            )
           )}
         </DialogContent>
       </Dialog>
