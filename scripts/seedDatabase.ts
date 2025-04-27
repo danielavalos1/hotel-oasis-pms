@@ -1,5 +1,5 @@
 import { PrismaClient, RoomType, UserRole } from "@prisma/client";
-import * as bcrypt from "bcrypt";
+import * as bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
@@ -117,7 +117,7 @@ async function main() {
       await prisma.room.create({
         data: {
           roomNumber,
-          roomType: config.type,
+          type: config.type,
           pricePerNight: config.price,
           isAvailable: true,
           roomInventory: {
