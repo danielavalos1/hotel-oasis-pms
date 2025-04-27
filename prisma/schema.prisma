@@ -92,6 +92,7 @@ enum EmployeeStatus {
   INACTIVE
   ON_LEAVE
   TERMINATED
+  SUSPENDED
 }
 
 model Department {
