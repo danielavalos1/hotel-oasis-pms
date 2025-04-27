@@ -79,6 +79,7 @@ model User {
   passwordHash String
   email        String   @unique
   role         UserRole @default(RECEPTIONIST)
+  shift        String?  // Turno asignado: mañana, tarde o noche
 }
 
 model RoomInventory {
