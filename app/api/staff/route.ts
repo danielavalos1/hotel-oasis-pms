@@ -1,8 +1,25 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/auth-options';
-import { staffService, StaffCreateInput, StaffUpdateInput } from '@/services/staffService';
-import { EmployeeStatus, UserRole } from '@prisma/client';
+import { staffService, StaffCreateInput } from '@/services/staffService';
+import { EmployeeStatus, UserRole, Prisma } from '@prisma/client';
+import { z } from 'zod';
+
+// Zod schema para creación de staff
+enum _UserRoleProxy { // proxy para evitar colisión de import
+  ADMIN = 'ADMIN', RECEPTIONIST = 'RECEPTIONIST', HOUSEKEEPER = 'HOUSEKEEPER', SUPERADMIN = 'SUPERADMIN'
+}
+const StaffCreateSchema = z.object({
+  username: z.string().nonempty(),
+  name: z.string().nonempty(),
+  lastName: z.string().optional().nullable(),
+  email: z.string().email(),
+  password: z.string().min(6),
+  role: z.nativeEnum(_UserRoleProxy),
+  departmentId: z.number().optional().nullable().transform(val => val ?? undefined),
+  position: z.string().optional().nullable(),
+  hireDate: z.string().optional().transform(val => val ? new Date(val) : undefined)
+});
 
 // Get all staff members with optional filters
 export async function GET(request: Request) {
@@ -32,8 +49,7 @@ export async function GET(request: Request) {
     const staff = await staffService.getAllStaff({ status, role, departmentId });
     
     return NextResponse.json(staff);
-  } catch (error) {
-    console.error('Error fetching staff:', error);
+  } catch {
     return NextResponse.json(
       { error: 'Internal Server Error' }, 
       { status: 500 }
@@ -57,41 +73,31 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
     
-    // Parse request body
-    const body = await request.json();
-    
-    // Validate required fields
-    const requiredFields = ['username', 'name', 'email', 'password', 'role'];
-    for (const field of requiredFields) {
-      if (!body[field]) {
-        return NextResponse.json(
-          { error: `Missing required field: ${field}` }, 
-          { status: 400 }
-        );
-      }
+    // Validar payload con Zod
+    const json = await request.json();
+    const parsed = StaffCreateSchema.safeParse(json);
+    if (!parsed.success) {
+      const messages = parsed.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+      return NextResponse.json({ error: messages }, { status: 400 });
     }
-    
-    // Create new staff member
-    const newStaff = await staffService.createStaff(body as StaffCreateInput);
+    const data = parsed.data;
+    // Asegurar que departmentId undefined si no viene
+    if (data.departmentId === undefined) delete data.departmentId;
+
+    // Crear empleado con datos validados
+    const newStaff = await staffService.createStaff(data as StaffCreateInput);
     
     // Remove sensitive information
     const { passwordHash, ...staffData } = newStaff;
-    
+    // Enviar respuesta siempre con objeto
     return NextResponse.json(staffData, { status: 201 });
-  } catch (error: any) {
-    console.error('Error creating staff:', error);
-    
-    // Handle duplicate email or username
-    if (error.code === 'P2002') {
-      return NextResponse.json(
-        { error: 'Email or username already exists' }, 
-        { status: 409 }
-      );
+
+  } catch (err: unknown) {
+    // Si es error de duplicado de Prisma
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+      return NextResponse.json({ error: 'Email o username ya existe' }, { status: 409 });
     }
-    
-    return NextResponse.json(
-      { error: 'Internal Server Error' }, 
-      { status: 500 }
-    );
+    // Error genérico
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
