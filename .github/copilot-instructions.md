@@ -1,59 +1,44 @@
-# Copilot Project Instructions: Hotel Oasis PMS
+# Instrucciones de GitHub Copilot para Hotel Oasis PMS
 
-## Project Overview
-Hotel Oasis is a Property Management System (PMS) for hotels, focused on:
-- Reservation management (multi-room, multi-type)
-- Shift-based operations (morning, evening, night)
-- End-of-shift and end-of-day cutoffs
-- Guest database and CRM
-- Room inventory and maintenance
-- Sales and occupancy reporting
-- User roles (Admin, Receptionist, Housekeeper, Superadmin)
+## Visión general del proyecto
 
-## Tech Stack
-- Next.js (API routes for backend)
-- Prisma ORM (PostgreSQL)
-- TypeScript (frontend and backend)
-- React (dashboard UI)
+- Aplicación de gestión hotelera full-stack con Next.js v15.1.5 y React v19.x.
+- TypeScript para seguridad de tipos.
+- Prisma v6.6.0 para acceso a base de datos relacional.
+- Tailwind CSS v3.4.17 y Radix UI en `components/ui` para estilo y accesibilidad.
 
-## Core Domain Concepts
-- **Booking**: Central entity, links guests, rooms, dates, payments, and status. Supports multi-room bookings and tracks modifications.
-- **Room**: Has type, capacity, amenities, price, and availability. Linked to inventory and channel rates.
-- **Guest**: Stores personal/contact info, linked to bookings.
-- **User**: System users with roles for access control.
-- **Shift**: Operations are organized by shifts (matutino, vespertino, nocturno). System supports shift cutoffs and end-of-day processes.
-- **Payment**: Linked to bookings, tracks amount, method, and date.
-- **Reports**: Sales, occupancy, and operational reports are generated per shift and per day.
+## Estructura clave
 
-## Business Rules
-- Bookings can span multiple rooms and types; availability is checked per room type and date range.
-- Shift cutoffs trigger operational and financial closures (e.g., sales, cash, occupancy per shift).
-- End-of-day process aggregates all shifts and finalizes daily reports.
-- Guests can be searched/created/updated by staff; duplicate emails are prevented.
-- Room inventory tracks maintenance and availability.
+- `app/`: Router de Next.js (layouts, páginas, API routes en `app/api`).
+- `components/`: Componentes React reutilizables.
+- `components/ui/`: Primitivas de UI (basadas en Radix + Tailwind).
+- `context/`: Providers de React Context (p. ej. AuthProvider).
+- `services/`: Lógica de negocio con Prisma (`lib/prisma.ts`).
+- `hooks/`: Hooks personalizados.
+- `validations/`: Esquemas Zod para validación.
+- `lib/`: Utilidades y configuración de cliente Prisma.
 
-## API & Services
-- API routes under `/app/api/` for bookings, guests, rooms, etc.
-- Service layer (`/services/`) encapsulates business logic for bookings, guests, rooms, and email notifications.
-- Validation with Zod schemas.
+## Buenas prácticas
 
-## Data Model (Prisma)
-- See `prisma/schema.prisma` for full model. Key models:
-  - `Booking`, `BookingRoom`, `Room`, `Guest`, `User`, `Payment`, `RoomInventory`, `Channel`, `ChannelRate`, `Amenity`.
-  - Enums: `RoomType`, `UserRole`.
+- Prefiere Server Components para fetch de datos y Client Components solo para UI interactiva.
+- Encapsula llamadas a Prisma en `services/*`; no usar Prisma directo en componentes.
+- Validar entradas externas con Zod antes de la capa de servicio.
+- Componentes con responsabilidad única, props tipadas, usar `ComponentProps` o interfaces explícitas.
+- Utilizar `cn` para merge de clases y tokens de diseño de `tailwind.config.ts` y variables CSS en `globals.css`.
+- Extender las primitivas de `components/ui/*` para consistencia y accesibilidad.
 
-## UI
-- Dashboard components for bookings, rooms, guests, payments, inventory, and reports.
-- Uses SWR for data fetching.
+## Convenciones de nombres
 
-## Naming
-- Project: Hotel Oasis
-- Main entities: Booking, Room, Guest, User, Shift, Payment
+- Archivos en kebab-case, componentes React en PascalCase.
+- Prefijos claros: Providers (`AuthProvider`), hooks (`useAuth`, `useToast`).
+- Servicios nombrados por dominio (`bookingService`, `guestService`).
 
-## Special Notes
-- Always consider shift context for operations affecting sales, occupancy, or cash.
-- All booking and guest operations must be transactional and validated.
-- End-of-day and shift cutoffs are critical for reporting and must be atomic.
+## Manejo de errores y notificaciones
 
----
-This file is for Copilot and other AI tools to provide better context and suggestions for the Hotel Oasis PMS codebase.
+- Lanzar errores descriptivos en servicios y capturar en rutas API con códigos HTTP.
+- Notificaciones al usuario con `use-toast` en componentes cliente.
+
+## Rendimiento y escalabilidad
+
+- Utilizar caching de Next.js (`revalidate`, `cache`) según corresponda.
+- Paginar conjuntos de datos grandes en rutas API con query params.
