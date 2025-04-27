@@ -14,6 +14,8 @@ import {
   PenTool as Tool,
   Star,
   Menu,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -30,21 +32,30 @@ interface NavItemProps {
   icon: React.ReactNode;
   active?: boolean;
   onClick?: () => void;
+  collapsed?: boolean;
 }
 
-const NavItem = ({ href, label, icon, active, onClick }: NavItemProps) => (
+const NavItem = ({
+  href,
+  label,
+  icon,
+  active,
+  onClick,
+  collapsed = false,
+}: NavItemProps) => (
   <Link
     href={href}
     onClick={onClick}
     className={cn(
-      "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-accent",
+      "flex items-center text-sm transition-all hover:bg-accent",
+      collapsed ? "justify-center p-2" : "gap-3 rounded-lg px-3 py-2",
       active
         ? "bg-accent text-accent-foreground font-medium"
         : "text-muted-foreground"
     )}
   >
     {icon}
-    {label}
+    {!collapsed && <span>{label}</span>}
   </Link>
 );
 
@@ -55,6 +66,7 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const { data: session } = useSession();
   const user = session?.user;
 
@@ -67,6 +79,30 @@ export default function DashboardLayout({
 
   const closeMobileMenu = () => {
     setMobileOpen(false);
+  };
+
+  // Filtrar enlaces según rol
+  const allowedNav = () => {
+    const role = user?.role;
+    if (role === "ADMIN" || role === "SUPERADMIN") return navItems;
+    if (role === "RECEPTIONIST")
+      return navItems.filter((item) =>
+        [
+          "/dashboard",
+          "/dashboard/bookings",
+          "/dashboard/guests",
+          "/dashboard/payments",
+        ].includes(item.href)
+      );
+    if (role === "HOUSEKEEPER")
+      return navItems.filter((item) =>
+        [
+          "/dashboard/inventory",
+          "/dashboard/rooms",
+          "/dashboard/maintenance",
+        ].includes(item.href)
+      );
+    return [];
   };
 
   const navItems = [
@@ -128,43 +164,48 @@ export default function DashboardLayout({
   ];
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex h-screen bg-background overflow-hidden">
       {/* Sidebar for desktop */}
-      <aside className="hidden lg:flex flex-col w-64 border-r bg-background">
+      <aside
+        className={`hidden lg:flex flex-col border-r bg-background transition-width duration-200 ${
+          collapsed ? "w-16" : "w-64"
+        } h-screen`}
+      >
         <div className="flex h-16 items-center border-b px-4">
-          <Building2 className="h-6 w-6 text-primary mr-2" />
-          <span className="text-xl font-semibold">Hotel Oasis</span>
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-2">
+              <Building2 className="h-6 w-6 text-primary" />
+              {!collapsed && (
+                <span className="text-xl font-semibold">Hotel Oasis</span>
+              )}
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setCollapsed(!collapsed)}
+            >
+              {collapsed ? (
+                <ChevronRight className="h-4 w-4" />
+              ) : (
+                <ChevronLeft className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
         </div>
         <nav className="flex-1 space-y-1 p-4">
-          {navItems.map((item) => (
+          {/* Enlaces filtrados por rol */}
+          {allowedNav().map((item) => (
             <NavItem
               key={item.href}
               href={item.href}
               label={item.label}
               icon={item.icon}
               active={pathname === item.href}
+              collapsed={collapsed}
             />
           ))}
         </nav>
-        <div className="border-t p-4 space-y-2">
-          {user && (
-            <div className="px-2 pb-2 flex items-center gap-2">
-              <p className="text-sm font-medium">{user.username}</p>
-              <p className="text-xs text-muted-foreground capitalize">
-                {user.role}
-              </p>
-            </div>
-          )}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start text-muted-foreground"
-            onClick={handleLogout}
-          >
-            <LogOut className="h-4 w-4 mr-2" />
-            Cerrar sesión
-          </Button>
-        </div>
+        {/* Sidebar no muestra datos del usuario ni logout; se manejan en header */}
       </aside>
 
       {/* Main content */}
@@ -186,7 +227,7 @@ export default function DashboardLayout({
                     <span className="text-lg font-semibold">Hotel Oasis</span>
                   </div>
                   <nav className="flex flex-col gap-1 py-4">
-                    {navItems.map((item) => (
+                    {allowedNav().map((item) => (
                       <NavItem
                         key={item.href}
                         href={item.href}
@@ -217,12 +258,26 @@ export default function DashboardLayout({
             </div>
             <div className="flex-1 flex items-center justify-end space-x-4">
               <ThemeToggle />
+              {user && (
+                <>
+                  <div className="hidden sm:flex items-center gap-2">
+                    <p className="text-sm font-medium">{user.username}</p>
+                    <p className="text-xs text-muted-foreground capitalize">
+                      {user.role}
+                    </p>
+                  </div>
+                  <Button variant="ghost" size="icon" onClick={handleLogout}>
+                    <LogOut className="h-4 w-4" />
+                    <span className="sr-only">Cerrar sesión</span>
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </header>
 
         {/* Page content */}
-        <main className="flex-1">
+        <main className="flex-1 overflow-y-auto">
           <div className="container py-6 px-4 md:px-6">{children}</div>
         </main>
       </div>
