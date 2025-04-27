@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Users, 
-  UserPlus, 
-  ClipboardList, 
+import {
+  Users,
+  UserPlus,
+  ClipboardList,
   Clock,
   FileBox,
   Building,
@@ -23,7 +23,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { useRouter } from "next/navigation";
 
@@ -31,7 +31,7 @@ export default function StaffManagement() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<string>("staff");
   const [showAddModal, setShowAddModal] = useState(false);
-  
+
   // Navegación con query params para preservar la pestaña activa durante refrescos
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -39,50 +39,59 @@ export default function StaffManagement() {
   };
 
   return (
-    <div className="container py-6 space-y-8">
+    <div className="w-full max-w-screen-xl mx-auto px-2 sm:px-4 md:px-6 py-4 space-y-8">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Gestión de Personal</h2>
+          <h2 className="text-3xl font-bold tracking-tight">
+            Gestión de Personal
+          </h2>
           <p className="text-muted-foreground mt-1">
             Administre el personal, horarios, asistencia y documentos
           </p>
         </div>
         <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
           <DialogTrigger asChild>
-            <Button className="flex items-center gap-2 w-full md:w-auto">
+            <Button className="flex items-center gap-2 w-full sm:w-auto">
               <UserPlus className="h-4 w-4" />
               Registrar Nuevo Empleado
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="w-full max-w-lg">
             <DialogHeader>
               <DialogTitle>Nuevo Empleado</DialogTitle>
-              <DialogDescription>Complete el formulario para registrar un nuevo empleado.</DialogDescription>
+              <DialogDescription>
+                Complete el formulario para registrar un nuevo empleado.
+              </DialogDescription>
             </DialogHeader>
             {/* El formulario se manejará en el componente StaffList */}
           </DialogContent>
         </Dialog>
       </div>
 
-      <Tabs defaultValue="staff" value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-        <TabsList className="flex h-12 items-center space-x-2 overflow-x-auto bg-muted/50 p-1 rounded-lg">
-          <TabsTrigger value="staff" className="flex items-center gap-2">
+      <Tabs
+        defaultValue="staff"
+        value={activeTab}
+        onValueChange={handleTabChange}
+        className="space-y-6"
+      >
+        <TabsList className="flex h-12 items-center space-x-2 overflow-x-auto bg-muted/50 p-1 rounded-lg w-full sm:w-auto">
+          <TabsTrigger value="staff" className="flex items-center gap-2 whitespace-nowrap">
             <Users className="h-4 w-4" />
             Personal
           </TabsTrigger>
-          <TabsTrigger value="attendance" className="flex items-center gap-2">
+          <TabsTrigger value="attendance" className="flex items-center gap-2 whitespace-nowrap">
             <ClipboardList className="h-4 w-4" />
             Asistencia
           </TabsTrigger>
-          <TabsTrigger value="schedules" className="flex items-center gap-2">
+          <TabsTrigger value="schedules" className="flex items-center gap-2 whitespace-nowrap">
             <Clock className="h-4 w-4" />
             Horarios
           </TabsTrigger>
-          <TabsTrigger value="documents" className="flex items-center gap-2">
+          <TabsTrigger value="documents" className="flex items-center gap-2 whitespace-nowrap">
             <FileBox className="h-4 w-4" />
             Documentos
           </TabsTrigger>
-          <TabsTrigger value="departments" className="flex items-center gap-2">
+          <TabsTrigger value="departments" className="flex items-center gap-2 whitespace-nowrap">
             <Building className="h-4 w-4" />
             Departamentos
           </TabsTrigger>
@@ -93,8 +102,8 @@ export default function StaffManagement() {
         </TabsContent>
 
         <TabsContent value="attendance">
-          <StaffTabLayout 
-            title="Control de Asistencia" 
+          <StaffTabLayout
+            title="Control de Asistencia"
             description="Registre y monitoree la asistencia del personal"
           >
             <AttendanceManager />
@@ -102,8 +111,8 @@ export default function StaffManagement() {
         </TabsContent>
 
         <TabsContent value="schedules">
-          <StaffTabLayout 
-            title="Administración de Horarios" 
+          <StaffTabLayout
+            title="Administración de Horarios"
             description="Cree y gestione los horarios del personal"
           >
             <ScheduleManager />
@@ -111,8 +120,8 @@ export default function StaffManagement() {
         </TabsContent>
 
         <TabsContent value="documents">
-          <StaffTabLayout 
-            title="Documentos del Personal" 
+          <StaffTabLayout
+            title="Documentos del Personal"
             description="Gestione los documentos y certificaciones del personal"
           >
             <DocumentManager />
@@ -120,8 +129,8 @@ export default function StaffManagement() {
         </TabsContent>
 
         <TabsContent value="departments">
-          <StaffTabLayout 
-            title="Departamentos" 
+          <StaffTabLayout
+            title="Departamentos"
             description="Gestione los departamentos de la empresa"
           >
             <DepartmentManager />
