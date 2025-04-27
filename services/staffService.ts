@@ -5,6 +5,7 @@ import {
   AttendanceStatus,
   Prisma
 } from "@prisma/client";
+import bcrypt from 'bcrypt';
 
 export type StaffCreateInput = {
   username: string;
@@ -61,9 +62,8 @@ export type DepartmentInput = {
 
 // Helper function to hash passwords
 async function hashPassword(password: string): Promise<string> {
-  // In a real application, use bcrypt or similar
-  // For this example, we'll use a simple hash (NOT RECOMMENDED FOR PRODUCTION)
-  return Buffer.from(password).toString('base64');
+  const saltRounds = 10;
+  return bcrypt.hash(password, saltRounds);
 }
 
 // Staff Management Service
@@ -150,6 +150,16 @@ export const staffService = {
     return prisma.user.update({
       where: { id },
       data: { status }
+    });
+  },
+  
+  // Reset staff member password to default
+  resetPassword: async (id: number) => {
+    const defaultPassword = '123456';
+    const passwordHash = await hashPassword(defaultPassword);
+    return prisma.user.update({
+      where: { id },
+      data: { passwordHash }
     });
   },
   
