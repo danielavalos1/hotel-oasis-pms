@@ -5,7 +5,7 @@ import {
   AttendanceStatus,
   Prisma
 } from "@prisma/client";
-import bcrypt from 'bcrypt';
+import * as bcrypt from "bcryptjs";
 
 export type StaffCreateInput = {
   username: string;
