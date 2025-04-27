@@ -5,7 +5,7 @@ import { staffService } from '@/services/staffService';
 import { prisma } from '@/lib/prisma';
 import { EmployeeStatus, AttendanceStatus } from '@prisma/client';
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
     // Check authentication and authorization
     const session = await getServerSession(authOptions);
@@ -77,7 +77,7 @@ export async function GET(request: Request) {
       },
       where: {
         role: {
-          in: ['STAFF', 'ADMIN']
+          in: ['SUPERADMIN', 'ADMIN']
         }
       }
     });
@@ -144,13 +144,12 @@ export async function GET(request: Request) {
       employeeStatus: employeeStatusStats,
       departments: departmentStats
     };
-    
-    return NextResponse.json(stats);
-  } catch (error) {
-    console.error('Error fetching staff statistics:', error);
-    return NextResponse.json(
-      { error: 'Internal Server Error' }, 
-      { status: 500 }
-    );
+
+    // Evitar payload null: garantizar que stats sea un objeto
+    return NextResponse.json(stats ?? {}, { status: 200 });
+  } catch (err: unknown) {
+    console.error('Error fetching staff statistics:', err);
+    // Devolver mensaje de error con payload válido
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
