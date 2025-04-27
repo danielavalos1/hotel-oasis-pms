@@ -167,9 +167,12 @@ export default function DashboardLayout({
     <div className="flex h-screen bg-background overflow-hidden">
       {/* Sidebar for desktop */}
       <aside
-        className={`hidden lg:flex flex-col border-r bg-background transition-width duration-200 ${
-          collapsed ? "w-16" : "w-64"
-        } h-screen`}
+        className={cn(
+          "hidden lg:flex flex-col border-r bg-background transition-all duration-200 z-30",
+          collapsed ? "w-16" : "w-64",
+          "h-full fixed lg:static left-0 top-0"
+        )}
+        style={{ minHeight: "100dvh" }}
       >
         <div className="flex h-16 items-center border-b px-4">
           <div className="flex items-center justify-between w-full">
@@ -209,10 +212,10 @@ export default function DashboardLayout({
       </aside>
 
       {/* Main content */}
-      <div className="flex flex-col flex-1">
+      <div className="flex flex-col flex-1 min-w-0">
         {/* Header for mobile and desktop */}
         <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="container flex h-16 items-center justify-between px-4 md:px-6">
+          <div className="flex h-16 items-center justify-between px-2 sm:px-4 md:px-6 max-w-full w-full mx-auto">
             <div className="flex items-center gap-2 lg:hidden">
               <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
                 <SheetTrigger asChild>
@@ -277,8 +280,10 @@ export default function DashboardLayout({
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto">
-          <div className="container py-6 px-4 md:px-6">{children}</div>
+        <main className="flex-1 overflow-y-auto min-w-0">
+          <div className="w-full max-w-screen-xl mx-auto py-4 px-2 sm:px-4 md:px-6 min-w-0">
+            {children}
+          </div>
         </main>
       </div>
     </div>
