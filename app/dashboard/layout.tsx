@@ -32,6 +32,7 @@ const navItems = [
   { href: "/dashboard/amenities", label: "Amenities", icon: Star },
   { href: "/dashboard/maintenance", label: "Maintenance", icon: Tool },
   { href: "/dashboard/guests", label: "Guests", icon: Users },
+  { href: "/dashboard/users", label: "Personal", icon: Users },
   { href: "/dashboard/payments", label: "Payments", icon: CreditCard },
 ];
 
