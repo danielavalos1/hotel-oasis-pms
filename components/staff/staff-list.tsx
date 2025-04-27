@@ -690,16 +690,15 @@ export function StaffList({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="role">Rol*</Label>
-                <Select name="role" defaultValue="STAFF">
+                <Select name="role" defaultValue="RECEPTIONIST">
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar rol" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="ADMIN">Administrador</SelectItem>
-                    <SelectItem value="STAFF">Staff</SelectItem>
+                    <SelectItem value="SUPERADMIN">Superadministrador</SelectItem>
                     <SelectItem value="RECEPTIONIST">Recepcionista</SelectItem>
-                    <SelectItem value="HOUSEKEEPING">Limpieza</SelectItem>
-                    <SelectItem value="MAINTENANCE">Mantenimiento</SelectItem>
+                    <SelectItem value="HOUSEKEEPER">Personal de limpieza</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -811,12 +810,9 @@ export function StaffList({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="ADMIN">Administrador</SelectItem>
-                      <SelectItem value="STAFF">Staff</SelectItem>
-                      <SelectItem value="RECEPTIONIST">
-                        Recepcionista
-                      </SelectItem>
-                      <SelectItem value="HOUSEKEEPING">Limpieza</SelectItem>
-                      <SelectItem value="MAINTENANCE">Mantenimiento</SelectItem>
+                      <SelectItem value="SUPERADMIN">Superadministrador</SelectItem>
+                      <SelectItem value="RECEPTIONIST">Recepcionista</SelectItem>
+                      <SelectItem value="HOUSEKEEPER">Personal de limpieza</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
