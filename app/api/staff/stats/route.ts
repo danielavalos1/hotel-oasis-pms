@@ -145,8 +145,8 @@ export async function GET() {
       departments: departmentStats
     };
 
-    // Evitar payload null: garantizar que stats sea un objeto
-    return NextResponse.json(stats ?? {}, { status: 200 });
+    // Devolver estadísticas en un objeto
+    return NextResponse.json({ stats }, { status: 200 });
   } catch (err: unknown) {
     console.error('Error fetching staff statistics:', err);
     // Devolver mensaje de error con payload válido
