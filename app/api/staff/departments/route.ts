@@ -22,7 +22,8 @@ export async function GET() {
     // Get all departments
     const departments = await staffService.getAllDepartments();
     
-    return NextResponse.json(departments);
+    // Devolver siempre un objeto como payload
+    return NextResponse.json({ departments });
   } catch (error) {
     console.error('Error fetching departments:', error);
     return NextResponse.json(
