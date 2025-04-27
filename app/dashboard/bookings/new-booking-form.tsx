@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -29,6 +29,7 @@ import { useForm } from "react-hook-form";
 import { CalendarIcon } from "lucide-react";
 import { cn, formatDate } from "@/lib/utils";
 import { toast } from "sonner";
+import { Room } from "@prisma/client";
 
 interface NewBookingFormProps {
   onSuccess: () => void;
@@ -37,6 +38,9 @@ interface NewBookingFormProps {
 export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
   const [activeTab, setActiveTab] = useState("details");
   const [isLoading, setIsLoading] = useState(false);
+  const [availableRooms, setAvailableRooms] = useState<
+    Array<{ id: number; roomNumber: string; roomType: Room["roomType"]; pricePerNight: number }>
+  >([]);
 
   const form = useForm({
     defaultValues: {
@@ -48,13 +52,14 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
       adults: "1",
       children: "0",
       roomType: "",
+      roomId: "",
       notes: "",
     },
   });
 
   const onSubmit = async (data: any) => {
     setIsLoading(true);
-    
+
     // Simulate API call
     setTimeout(() => {
       console.log("Booking data:", data);
@@ -63,13 +68,57 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
       onSuccess();
     }, 1000);
   };
-  
+
   const getNextTab = () => {
     if (activeTab === "details") return "room";
     if (activeTab === "room") return "payment";
     return "details";
   };
-  
+
+  // Fetch available rooms cuando fechas y tipo cambian
+  useEffect(() => {
+    const checkIn = form.getValues("checkIn");
+    const checkOut = form.getValues("checkOut");
+    const type = form.watch("roomType");
+    if (checkIn && checkOut && type) {
+      const start = checkIn.toISOString().split("T")[0];
+      const end = checkOut.toISOString().split("T")[0];
+      fetch(`/api/rooms?startDate=${start}&endDate=${end}`)
+        .then((res) => res.json())
+        .then((res: { success: boolean; data: any[] }) => {
+          if (res.success) {
+            // Mapear y filtrar habitaciones por tipo exacto, incluyendo pricePerNight
+            setAvailableRooms(
+              res.data
+                .map((r) => ({
+                  id: r.id,
+                  roomNumber: r.roomNumber,
+                  roomType: r.roomType,
+                  pricePerNight: parseFloat(r.pricePerNight),
+                }))
+                .filter((r) => r.roomType === type)
+            );
+          }
+        });
+    } else {
+      setAvailableRooms([]);
+    }
+  }, [form.watch("checkIn"), form.watch("checkOut"), form.watch("roomType")]);
+
+  // Label para tipos
+  const roomTypeLabels: Record<string, string> = {
+    SENCILLA: "Sencilla",
+    SENCILLA_ESPECIAL: "Sencilla Especial",
+    DOBLE: "Doble",
+    DOBLE_ESPECIAL: "Doble Especial",
+    SUITE_A: "Suite A",
+    SUITE_B: "Suite B",
+  };
+  // Selección de habitación active
+  const selectedRoom = availableRooms.find(
+    (r) => r.id.toString() === form.watch("roomId")
+  );
+
   return (
     <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -78,10 +127,9 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
           <TabsTrigger value="room">Habitación</TabsTrigger>
           <TabsTrigger value="payment">Pago</TabsTrigger>
         </TabsList>
-        
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          
             <TabsContent value="details" className="space-y-4">
               <div className="grid md:grid-cols-2 gap-4">
                 <FormField
@@ -101,12 +149,12 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
                 <FormField
                   control={form.control}
                   name="guestEmail"
-                  rules={{ 
+                  rules={{
                     required: "El email es obligatorio",
                     pattern: {
                       value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
                       message: "Email inválido",
-                    }
+                    },
                   }}
                   render={({ field }) => (
                     <FormItem>
@@ -119,7 +167,7 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
                   )}
                 />
               </div>
-              
+
               <FormField
                 control={form.control}
                 name="guestPhone"
@@ -134,7 +182,7 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
                   </FormItem>
                 )}
               />
-              
+
               <div className="grid md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -175,7 +223,7 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="checkOut"
@@ -208,10 +256,10 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
                             selected={field.value || undefined}
                             onSelect={field.onChange}
                             initialFocus
-                            disabled={date => 
-                              form.getValues("checkIn") ? 
-                                date < form.getValues("checkIn")! : 
-                                false
+                            disabled={(date) =>
+                              form.getValues("checkIn")
+                                ? date < form.getValues("checkIn")!
+                                : false
                             }
                           />
                         </PopoverContent>
@@ -221,7 +269,7 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
                   )}
                 />
               </div>
-              
+
               <div className="grid md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -229,8 +277,8 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Adultos</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange} 
+                      <Select
+                        onValueChange={field.onChange}
                         defaultValue={field.value}
                       >
                         <FormControl>
@@ -249,15 +297,15 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="children"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Niños</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange} 
+                      <Select
+                        onValueChange={field.onChange}
                         defaultValue={field.value}
                       >
                         <FormControl>
@@ -278,7 +326,7 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
                 />
               </div>
             </TabsContent>
-            
+
             <TabsContent value="room" className="space-y-4">
               <FormField
                 control={form.control}
@@ -287,8 +335,8 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Tipo de habitación</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
+                    <Select
+                      onValueChange={field.onChange}
                       defaultValue={field.value}
                     >
                       <FormControl>
@@ -297,45 +345,76 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="standard">Estándar</SelectItem>
-                        <SelectItem value="deluxe">Deluxe</SelectItem>
-                        <SelectItem value="suite">Suite</SelectItem>
-                        <SelectItem value="presidential">Presidencial</SelectItem>
+                        <SelectItem value="SENCILLA">Sencilla</SelectItem>
+                        <SelectItem value="SENCILLA_ESPECIAL">Sencilla Especial</SelectItem>
+                        <SelectItem value="DOBLE">Doble</SelectItem>
+                        <SelectItem value="DOBLE_ESPECIAL">Doble Especial</SelectItem>
+                        <SelectItem value="SUITE_A">Suite A</SelectItem>
+                        <SelectItem value="SUITE_B">Suite B</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              
+
+              {/* Selección de habitación disponible */}
+              <FormField
+                control={form.control}
+                name="roomId"
+                rules={{ required: "Debe seleccionar una habitación" }}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Habitación disponible</FormLabel>
+                    <FormControl>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue
+                              placeholder={
+                                availableRooms.length
+                                  ? "Seleccionar habitación"
+                                  : "No hay disponibles"
+                              }
+                            />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {availableRooms.map((r) => (
+                            <SelectItem key={r.id} value={r.id.toString()}>
+                              {r.roomNumber}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <div className="grid grid-cols-1 gap-4">
-                {form.watch("roomType") && (
+                {selectedRoom && (
                   <div className="border rounded-md p-4">
                     <h3 className="font-medium mb-2">
-                      {form.watch("roomType") === "standard" && "Habitación Estándar"}
-                      {form.watch("roomType") === "deluxe" && "Habitación Deluxe"}
-                      {form.watch("roomType") === "suite" && "Suite"}
-                      {form.watch("roomType") === "presidential" && "Suite Presidencial"}
+                      {roomTypeLabels[selectedRoom.roomType]}
                     </h3>
                     <div className="text-sm text-muted-foreground mb-4">
-                      {form.watch("roomType") === "standard" && "Habitación con cama doble, baño privado y vista a la ciudad."}
-                      {form.watch("roomType") === "deluxe" && "Habitación espaciosa con cama king, baño con tina y vista panorámica."}
-                      {form.watch("roomType") === "suite" && "Suite con dormitorio separado, sala de estar, jacuzzi y terraza privada."}
-                      {form.watch("roomType") === "presidential" && "Suite de lujo con sala comedor, servicio de mayordomo y terraza con vista al mar."}
+                      {/* opcional: descripción por tipo */}
                     </div>
                     <div className="flex justify-between">
                       <span>Precio por noche:</span>
                       <span className="font-medium">
-                        {form.watch("roomType") === "standard" && "$120"}
-                        {form.watch("roomType") === "deluxe" && "$180"}
-                        {form.watch("roomType") === "suite" && "$250"}
-                        {form.watch("roomType") === "presidential" && "$450"}
+                        ${selectedRoom.pricePerNight.toFixed(2)}
                       </span>
                     </div>
                   </div>
                 )}
               </div>
-              
+
               <FormField
                 control={form.control}
                 name="notes"
@@ -343,13 +422,16 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
                   <FormItem>
                     <FormLabel>Notas especiales</FormLabel>
                     <FormControl>
-                      <Input placeholder="Solicitudes especiales, alergias, etc." {...field} />
+                      <Input
+                        placeholder="Solicitudes especiales, alergias, etc."
+                        {...field}
+                      />
                     </FormControl>
                   </FormItem>
                 )}
               />
             </TabsContent>
-            
+
             <TabsContent value="payment" className="space-y-4">
               <div className="border rounded-md p-4">
                 <h3 className="font-medium mb-4">Resumen de reserva</h3>
@@ -360,67 +442,76 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Check-in:</span>
-                    <span>{form.getValues("checkIn") ? formatDate(form.getValues("checkIn")!.toISOString()) : "-"}</span>
+                    <span>
+                      {form.getValues("checkIn")
+                        ? formatDate(form.getValues("checkIn")!.toISOString())
+                        : "-"}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Check-out:</span>
-                    <span>{form.getValues("checkOut") ? formatDate(form.getValues("checkOut")!.toISOString()) : "-"}</span>
+                    <span>
+                      {form.getValues("checkOut")
+                        ? formatDate(form.getValues("checkOut")!.toISOString())
+                        : "-"}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Habitación:</span>
                     <span>
-                      {form.watch("roomType") === "standard" && "Estándar"}
-                      {form.watch("roomType") === "deluxe" && "Deluxe"}
-                      {form.watch("roomType") === "suite" && "Suite"}
-                      {form.watch("roomType") === "presidential" && "Presidencial"}
-                      {!form.watch("roomType") && "-"}
+                      {roomTypeLabels[selectedRoom?.roomType || ""] || "-"}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Huéspedes:</span>
-                    <span>{form.getValues("adults") || 0} adultos, {form.getValues("children") || 0} niños</span>
+                    <span>
+                      {form.getValues("adults") || 0} adultos,{" "}
+                      {form.getValues("children") || 0} niños
+                    </span>
                   </div>
                 </div>
                 <div className="border-t pt-4 mt-4">
                   <div className="flex justify-between font-medium">
                     <span>Total:</span>
                     <span>
-                      {form.watch("checkIn") && form.watch("checkOut") && form.watch("roomType") ? (
-                        `$${calculateTotal(form.watch("checkIn")!, form.watch("checkOut")!, form.watch("roomType")!)}`
-                      ) : (
-                        "-"
-                      )}
+                      {form.watch("checkIn") && form.watch("checkOut") && selectedRoom
+                        ? `$${(
+                            ((form.watch("checkOut")!.getTime() - form.watch("checkIn")!.getTime()) /
+                              (1000 * 60 * 60 * 24) || 1) *
+                            selectedRoom.pricePerNight
+                          ).toFixed(2)}`
+                        : "-"}
                     </span>
                   </div>
                 </div>
               </div>
-              
+
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  Se procesará un cargo de pre-autorización equivalente al 30% del total de la reserva.
-                  El saldo restante se cargará al momento del check-in.
+                  Se procesará un cargo de pre-autorización equivalente al 30%
+                  del total de la reserva. El saldo restante se cargará al
+                  momento del check-in.
                 </p>
-                
+
                 {/* En un caso real aquí iría el formulario de pago */}
               </div>
             </TabsContent>
-            
+
             <div className="flex justify-between mt-6">
               {activeTab !== "details" && (
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setActiveTab(activeTab === "room" ? "details" : "room")}
+                  onClick={() =>
+                    setActiveTab(activeTab === "room" ? "details" : "room")
+                  }
                 >
                   Atrás
                 </Button>
               )}
-              
+
               {activeTab !== "payment" ? (
-                <Button
-                  type="button"
-                  onClick={() => setActiveTab(getNextTab())}
-                >
+                <Button type="button" onClick={() => setActiveTab(getNextTab())}>
                   Continuar
                 </Button>
               ) : (
@@ -434,19 +525,4 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
       </Tabs>
     </div>
   );
-}
-
-// Helper function to calculate total based on room type and dates
-function calculateTotal(checkIn: Date, checkOut: Date, roomType: string): string {
-  const prices: Record<string, number> = {
-    standard: 120,
-    deluxe: 180,
-    suite: 250,
-    presidential: 450,
-  };
-  
-  const nightsStay = Math.max(1, Math.round((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24)));
-  const total = prices[roomType] * nightsStay;
-  
-  return total.toFixed(2);
 }
