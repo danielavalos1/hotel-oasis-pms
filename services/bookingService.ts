@@ -96,6 +96,23 @@ export const bookingService = {
     }
   },
 
+  /**
+   * Fetch a booking along with its related guest and rooms. Throws if not found.
+   */
+  async getBookingWithRelations(id: number) {
+    try {
+      return await prisma.booking.findUniqueOrThrow({
+        where: { id },
+        include: {
+          guest: true,
+          bookingRooms: { include: { room: true } },
+        },
+      });
+    } catch (error) {
+      throw new Error(`Error fetching booking with relations: ${error}`);
+    }
+  },
+
   async getAllBookings() {
     try {
       return await prisma.booking.findMany({
