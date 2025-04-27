@@ -1,56 +1,92 @@
 import { prisma } from "@/lib/prisma";
-import { createBookingSchema, type CreateBookingInput } from "@/lib/validations/booking";
+import {
+  createBookingSchema,
+  type CreateBookingInput,
+} from "@/lib/validations/booking";
 import { Booking } from "@prisma/client";
 
 export const bookingService = {
   async createBooking(input: CreateBookingInput) {
     const validatedData = createBookingSchema.parse(input);
-    
+
     return await prisma.$transaction(async (tx) => {
       let guestId: number;
-      
-      if ('id' in validatedData.guest) {
+
+      if ("id" in validatedData.guest) {
         const existingGuest = await tx.guest.findUnique({
           where: { id: validatedData.guest.id },
         });
-        
+
         if (!existingGuest) {
-          throw new Error('Guest not found');
+          throw new Error("Guest not found");
         }
-        
+
         guestId = existingGuest.id;
       } else {
-        const newGuest = await tx.guest.create({
-          data: validatedData.guest,
+        // Primero buscar por email
+        const existingGuest = await tx.guest.findUnique({
+          where: { email: validatedData.guest.email },
         });
-        guestId = newGuest.id;
+
+        if (existingGuest) {
+          // Si existe, actualizar sus datos
+          const updatedGuest = await tx.guest.update({
+            where: { id: existingGuest.id },
+            data: validatedData.guest,
+          });
+          guestId = updatedGuest.id;
+        } else {
+          // Si no existe, crear nuevo huésped
+          const newGuest = await tx.guest.create({
+            data: validatedData.guest,
+          });
+          guestId = newGuest.id;
+        }
       }
-      
-      return await tx.booking.create({
+
+      // Crear la reserva
+      const booking = await tx.booking.create({
         data: {
           guestId,
-          roomId: validatedData.roomId,
           checkInDate: validatedData.checkInDate,
           checkOutDate: validatedData.checkOutDate,
           totalPrice: validatedData.totalPrice,
           status: validatedData.status,
+          numberOfGuests: validatedData.numberOfGuests || 1,
+          // Crear las relaciones de BookingRoom
+          bookingRooms: {
+            create: validatedData.rooms.map((room) => ({
+              roomId: room.roomId,
+              priceAtTime: room.priceAtTime,
+            })),
+          },
         },
         include: {
           guest: true,
-          room: true,
+          bookingRooms: {
+            include: {
+              room: true,
+            },
+          },
         },
       });
+
+      return booking;
     });
   },
 
   // Read
-  async getBooking(id: number): Promise<Booking | null> {
+  async getBooking(id: number) {
     try {
       return await prisma.booking.findUnique({
         where: { id },
         include: {
           guest: true,
-          room: true,
+          bookingRooms: {
+            include: {
+              room: true,
+            },
+          },
           payments: true,
           modifications: true,
         },
@@ -60,12 +96,16 @@ export const bookingService = {
     }
   },
 
-  async getAllBookings(): Promise<Booking[]> {
+  async getAllBookings() {
     try {
       return await prisma.booking.findMany({
         include: {
           guest: true,
-          room: true,
+          bookingRooms: {
+            include: {
+              room: true,
+            },
+          },
         },
       });
     } catch (error) {
@@ -73,7 +113,7 @@ export const bookingService = {
     }
   },
 
-  async getBookingsByDateRange(startDate: Date, endDate: Date): Promise<Booking[]> {
+  async getBookingsByDateRange(startDate: Date, endDate: Date) {
     try {
       return await prisma.booking.findMany({
         where: {
@@ -94,7 +134,11 @@ export const bookingService = {
         },
         include: {
           guest: true,
-          room: true,
+          bookingRooms: {
+            include: {
+              room: true,
+            },
+          },
         },
       });
     } catch (error) {
@@ -103,14 +147,18 @@ export const bookingService = {
   },
 
   // Update
-  async updateBooking(id: number, data: Partial<Booking>): Promise<Booking> {
+  async updateBooking(id: number, data: Partial<Booking>) {
     try {
       return await prisma.booking.update({
         where: { id },
         data,
         include: {
           guest: true,
-          room: true,
+          bookingRooms: {
+            include: {
+              room: true,
+            },
+          },
         },
       });
     } catch (error) {
