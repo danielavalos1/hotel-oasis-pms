@@ -5,6 +5,7 @@ import { Activity } from "lucide-react";
 import { Overview } from "@/components/dashboard/overview";
 import { RecentBookings } from "@/components/dashboard/recent-bookings";
 import { RoomStatus } from "@/components/dashboard/room-status";
+import { BookingCalendar } from "@/components/dashboard/booking-calendar";
 
 export default function Dashboard() {
   return (
@@ -79,6 +80,15 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="mt-6 col-span-full transition-all hover:shadow-md">
+        <CardHeader>
+          <CardTitle>Booking Calendar</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <BookingCalendar />
+        </CardContent>
+      </Card>
 
       <Card className="mt-6 transition-all hover:shadow-md">
         <CardHeader>
