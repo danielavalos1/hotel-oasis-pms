@@ -12,8 +12,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Eye, MoreHorizontal } from "lucide-react";
-import { useState, useEffect } from "react";
-import { 
+import { useState } from "react";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
+import useSWR from "swr";
+import { fetcher } from "@/lib/fetcher";
 
 // Types
 interface Booking {
@@ -49,103 +51,25 @@ const statusVariants = {
   cancelled: "bg-red-100 text-red-800 hover:bg-red-100/80",
 };
 
-export function BookingsTable({ searchQuery = "", dateRange }: BookingsTableProps) {
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+export function BookingsTable({
+  searchQuery = "",
+  dateRange,
+}: BookingsTableProps) {
   const [pageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  
-  useEffect(() => {
-    // Simulated fetch with delay to show loading state
-    setIsLoading(true);
-    
-    // In a real app, this would be an API call with filters
-    setTimeout(() => {
-      const mockData: Booking[] = Array.from({ length: 30 }, (_, i) => ({
-        id: `BK-${2000 + i}`,
-        guestName: [
-          "Juan Pérez",
-          "María González",
-          "Carlos Ruiz",
-          "Ana Ramírez",
-          "Miguel López",
-        ][Math.floor(Math.random() * 5)],
-        checkIn: new Date(
-          2025, 
-          3, 
-          Math.floor(Math.random() * 28) + 1
-        ).toISOString(),
-        checkOut: new Date(
-          2025,
-          3,
-          Math.floor(Math.random() * 28) + 1
-        ).toISOString(),
-        roomNumber: `${Math.floor(Math.random() * 5) + 1}0${Math.floor(Math.random() * 9) + 1}`,
-        status: [
-          "confirmed",
-          "checked-in",
-          "checked-out",
-          "cancelled",
-        ][Math.floor(Math.random() * 4)],
-        totalAmount: Math.floor(Math.random() * 500) + 100,
-      }));
-      
-      // Apply filters
-      let filteredData = mockData;
-      
-      // Search filter
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase();
-        filteredData = filteredData.filter(
-          (booking) => 
-            booking.guestName.toLowerCase().includes(query) ||
-            booking.id.toLowerCase().includes(query) ||
-            booking.roomNumber.includes(query)
-        );
-      }
-      
-      // Date range filter
-      if (dateRange?.from || dateRange?.to) {
-        filteredData = filteredData.filter((booking) => {
-          const checkIn = new Date(booking.checkIn);
-          const checkOut = new Date(booking.checkOut);
-          
-          if (dateRange.from && dateRange.to) {
-            return (
-              (checkIn >= dateRange.from && checkIn <= dateRange.to) ||
-              (checkOut >= dateRange.from && checkOut <= dateRange.to) ||
-              (checkIn <= dateRange.from && checkOut >= dateRange.to)
-            );
-          }
-          
-          if (dateRange.from) {
-            return checkOut >= dateRange.from;
-          }
-          
-          if (dateRange.to) {
-            return checkIn <= dateRange.to;
-          }
-          
-          return true;
-        });
-      }
-      
-      // Calculate pagination
-      setTotalPages(Math.ceil(filteredData.length / pageSize));
-      
-      // Get current page data
-      const startIndex = (currentPage - 1) * pageSize;
-      setBookings(filteredData.slice(startIndex, startIndex + pageSize));
-      
-      setIsLoading(false);
-    }, 800);
-  }, [searchQuery, dateRange, currentPage, pageSize]);
+  // Construir query params para API
+  const params = new URLSearchParams();
+  if (dateRange?.from && dateRange?.to) {
+    params.set("startDate", dateRange.from.toISOString().split("T")[0]);
+    params.set("endDate", dateRange.to.toISOString().split("T")[0]);
+  }
+  const url = `/api/bookings?${params.toString()}`;
+  const { data, error } = useSWR<{ success: boolean; data: Booking[] }>(
+    url,
+    fetcher
+  );
+  const isLoading = !data && !error;
 
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-  };
-  
   if (isLoading) {
     return (
       <div>
@@ -165,14 +89,30 @@ export function BookingsTable({ searchQuery = "", dateRange }: BookingsTableProp
           <TableBody>
             {Array.from({ length: 5 }).map((_, index) => (
               <TableRow key={index}>
-                <TableCell><Skeleton className="h-6 w-20" /></TableCell>
-                <TableCell><Skeleton className="h-6 w-32" /></TableCell>
-                <TableCell><Skeleton className="h-6 w-24" /></TableCell>
-                <TableCell><Skeleton className="h-6 w-24" /></TableCell>
-                <TableCell><Skeleton className="h-6 w-12" /></TableCell>
-                <TableCell><Skeleton className="h-6 w-24" /></TableCell>
-                <TableCell><Skeleton className="h-6 w-16" /></TableCell>
-                <TableCell><Skeleton className="h-8 w-8 rounded-full" /></TableCell>
+                <TableCell>
+                  <Skeleton className="h-6 w-20" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-6 w-32" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-6 w-24" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-6 w-24" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-6 w-12" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-6 w-24" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-6 w-16" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-8 w-8 rounded-full" />
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -180,8 +120,41 @@ export function BookingsTable({ searchQuery = "", dateRange }: BookingsTableProp
       </div>
     );
   }
-  
-  if (bookings.length === 0) {
+
+  if (error || !data?.success) {
+    return <div className="p-4 text-red-600">Error loading bookings</div>;
+  }
+  // Datos reales
+  let allBookings = data.data;
+  // Aplicar búsqueda
+  if (searchQuery.trim()) {
+    const q = searchQuery.toLowerCase();
+    allBookings = allBookings.filter(
+      (b) =>
+        b.guestName.toLowerCase().includes(q) ||
+        b.id.toLowerCase().includes(q) ||
+        b.roomNumber.includes(q)
+    );
+  }
+  // Aplicar filtros de fecha en caso de sólo un extremo
+  if (
+    (dateRange?.from && !dateRange.to) ||
+    (!dateRange?.from && dateRange?.to)
+  ) {
+    allBookings = allBookings.filter((b) => {
+      const checkIn = new Date(b.checkIn);
+      const checkOut = new Date(b.checkOut);
+      if (dateRange.from) return checkOut >= dateRange.from;
+      if (dateRange.to) return checkIn <= dateRange.to;
+      return true;
+    });
+  }
+  // Paginación
+  const totalPages = Math.ceil(allBookings.length / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const bookingsPage = allBookings.slice(startIndex, startIndex + pageSize);
+
+  if (bookingsPage.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
         <p className="text-muted-foreground mb-4">No se encontraron reservas</p>
@@ -206,7 +179,7 @@ export function BookingsTable({ searchQuery = "", dateRange }: BookingsTableProp
           </TableRow>
         </TableHeader>
         <TableBody>
-          {bookings.map((booking) => (
+          {bookingsPage.map((booking) => (
             <TableRow key={booking.id} className="hover:bg-muted/40">
               <TableCell className="font-medium">{booking.id}</TableCell>
               <TableCell>{booking.guestName}</TableCell>
@@ -214,13 +187,21 @@ export function BookingsTable({ searchQuery = "", dateRange }: BookingsTableProp
               <TableCell>{formatDate(booking.checkOut)}</TableCell>
               <TableCell>{booking.roomNumber}</TableCell>
               <TableCell>
-                <Badge 
+                <Badge
                   variant="outline"
-                  className={statusVariants[booking.status as keyof typeof statusVariants]}
+                  className={
+                    statusVariants[
+                      booking.status as keyof typeof statusVariants
+                    ]
+                  }
                 >
-                  {booking.status === "checked-in" ? "Check-in" :
-                   booking.status === "checked-out" ? "Check-out" :
-                   booking.status === "confirmed" ? "Confirmada" : "Cancelada"}
+                  {booking.status === "checked-in"
+                    ? "Check-in"
+                    : booking.status === "checked-out"
+                    ? "Check-out"
+                    : booking.status === "confirmed"
+                    ? "Confirmada"
+                    : "Cancelada"}
                 </Badge>
               </TableCell>
               <TableCell>${booking.totalAmount.toFixed(2)}</TableCell>
@@ -239,16 +220,13 @@ export function BookingsTable({ searchQuery = "", dateRange }: BookingsTableProp
                       </Link>
                     </DropdownMenuItem>
                     {booking.status === "confirmed" && (
-                      <DropdownMenuItem>
-                        Check-in
-                      </DropdownMenuItem>
+                      <DropdownMenuItem>Check-in</DropdownMenuItem>
                     )}
                     {booking.status === "checked-in" && (
-                      <DropdownMenuItem>
-                        Check-out
-                      </DropdownMenuItem>
+                      <DropdownMenuItem>Check-out</DropdownMenuItem>
                     )}
-                    {(booking.status === "confirmed" || booking.status === "checked-in") && (
+                    {(booking.status === "confirmed" ||
+                      booking.status === "checked-in") && (
                       <DropdownMenuItem className="text-red-600">
                         Cancelar
                       </DropdownMenuItem>
@@ -260,38 +238,42 @@ export function BookingsTable({ searchQuery = "", dateRange }: BookingsTableProp
           ))}
         </TableBody>
       </Table>
-      
+
       <div className="flex items-center justify-between border-t px-4 py-4">
         <div className="text-sm text-muted-foreground">
-          Mostrando {((currentPage - 1) * pageSize) + 1} a {Math.min(currentPage * pageSize, ((totalPages - 1) * pageSize) + bookings.length)} de {(totalPages - 1) * pageSize + bookings.length} reservas
+          Mostrando {startIndex + 1} a{" "}
+          {Math.min(startIndex + pageSize, allBookings.length)} de{" "}
+          {allBookings.length} reservas
         </div>
         <div className="flex items-center space-x-1">
           <Button
             variant="outline"
             size="sm"
             disabled={currentPage === 1}
-            onClick={() => handlePageChange(currentPage - 1)}
+            onClick={() => setCurrentPage(currentPage - 1)}
           >
             Anterior
           </Button>
-          {Array.from({ length: totalPages }, (_, index) => (
-            <Button
-              key={index}
-              variant={index + 1 === currentPage ? "default" : "outline"}
-              size="sm"
-              onClick={() => handlePageChange(index + 1)}
-            >
-              {index + 1}
-            </Button>
-          )).slice(
-            Math.max(0, currentPage - 3),
-            Math.min(totalPages, currentPage + 2)
-          )}
+          {Array.from({ length: totalPages }, (_, i) => i + 1)
+            .slice(
+              Math.max(0, currentPage - 3),
+              Math.min(totalPages, currentPage + 2)
+            )
+            .map((page) => (
+              <Button
+                key={page}
+                variant={page === currentPage ? "default" : "outline"}
+                size="sm"
+                onClick={() => setCurrentPage(page)}
+              >
+                {page}
+              </Button>
+            ))}
           <Button
             variant="outline"
             size="sm"
             disabled={currentPage === totalPages}
-            onClick={() => handlePageChange(currentPage + 1)}
+            onClick={() => setCurrentPage(currentPage + 1)}
           >
             Siguiente
           </Button>
