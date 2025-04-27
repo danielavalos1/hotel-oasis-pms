@@ -113,9 +113,12 @@ export function StaffContainer({ defaultTab = "staff" }: StaffContainerProps) {
         throw new Error("Failed to fetch departments");
       }
       const data = await response.json();
-      setDepartments(data);
+
+      // Asegurar que siempre sea un array
+      setDepartments(Array.isArray(data?.departments) ? data.departments : []);
     } catch (err: any) {
       console.error("Error fetching departments:", err);
+      setDepartments([]);
     }
   };
 
