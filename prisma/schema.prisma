@@ -22,10 +22,13 @@ model Guest {
 model Room {
   id            Int            @id @default(autoincrement())
   roomNumber    String         @unique
-  roomType      RoomType
+  type          RoomType       @default(SENCILLA)
+  capacity      Int            @default(2)
   pricePerNight Decimal        @db.Decimal(10, 2)
+  description   String?
+  amenities     String[]       @default([])
   isAvailable   Boolean        @default(true)
-  bookings      Booking[]
+  bookingRooms  BookingRoom[] // Cambiado de bookings a bookingRooms
   roomInventory RoomInventory?
   channelRates  ChannelRate[]
 }
@@ -42,13 +45,12 @@ enum RoomType {
 model Booking {
   id            Int                   @id @default(autoincrement())
   guestId       Int
-  roomId        Int
   checkInDate   DateTime              @db.Date
   checkOutDate  DateTime              @db.Date
   totalPrice    Decimal               @db.Decimal(10, 2)
   status        String
   guest         Guest                 @relation(fields: [guestId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  room          Room                  @relation(fields: [roomId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  bookingRooms  BookingRoom[]
   payments      Payment[]
   modifications BookingModification[]
 }
@@ -70,21 +72,21 @@ enum UserRole {
 }
 
 model User {
-  id              Int              @id @default(autoincrement())
-  username        String           @unique
-  name            String
-  lastName        String?
-  passwordHash    String
-  email           String           @unique
-  role            UserRole         @default(RECEPTIONIST)
-  departmentId    Int?
-  position        String?
-  hireDate        DateTime?        @db.Date
-  status          EmployeeStatus   @default(ACTIVE)
-  department      Department?      @relation(fields: [departmentId], references: [id])
-  attendance      Attendance[]
-  schedules       Schedule[]
-  documents       EmployeeDocument[]
+  id           Int                @id @default(autoincrement())
+  username     String             @unique
+  name         String
+  lastName     String?
+  passwordHash String
+  email        String             @unique
+  role         UserRole           @default(RECEPTIONIST)
+  departmentId Int?
+  position     String?
+  hireDate     DateTime?          @db.Date
+  status       EmployeeStatus     @default(ACTIVE)
+  department   Department?        @relation(fields: [departmentId], references: [id])
+  attendance   Attendance[]
+  schedules    Schedule[]
+  documents    EmployeeDocument[]
 }
 
 enum EmployeeStatus {
@@ -96,21 +98,21 @@ enum EmployeeStatus {
 }
 
 model Department {
-  id          Int      @id @default(autoincrement())
-  name        String   @unique
+  id          Int     @id @default(autoincrement())
+  name        String  @unique
   description String?
   users       User[]
 }
 
 model Attendance {
-  id              Int       @id @default(autoincrement())
-  userId          Int
-  checkInTime     DateTime
-  checkOutTime    DateTime?
-  date            DateTime  @db.Date
-  status          AttendanceStatus
-  notes           String?
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  id           Int              @id @default(autoincrement())
+  userId       Int
+  checkInTime  DateTime
+  checkOutTime DateTime?
+  date         DateTime         @db.Date
+  status       AttendanceStatus
+  notes        String?
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 }
 
 enum AttendanceStatus {
@@ -122,24 +124,24 @@ enum AttendanceStatus {
 }
 
 model Schedule {
-  id              Int       @id @default(autoincrement())
-  userId          Int
-  startTime       DateTime
-  endTime         DateTime
-  dayOfWeek       Int       // 0-6, Sunday-Saturday
-  isRecurring     Boolean   @default(true)
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  startTime   DateTime
+  endTime     DateTime
+  dayOfWeek   Int // 0-6, Sunday-Saturday
+  isRecurring Boolean  @default(true)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 }
 
 model EmployeeDocument {
-  id              Int       @id @default(autoincrement())
-  userId          Int
-  documentType    String
-  documentName    String
-  documentUrl     String
-  uploadDate      DateTime  @default(now())
-  expiryDate      DateTime?
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  id           Int       @id @default(autoincrement())
+  userId       Int
+  documentType String
+  documentName String
+  documentUrl  String
+  uploadDate   DateTime  @default(now())
+  expiryDate   DateTime?
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 }
 
 model RoomInventory {
@@ -186,4 +188,16 @@ model BookingModification {
   modificationDate    DateTime @db.Date
   modificationDetails String
   booking             Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+}
+
+// Nuevo modelo para manejar la relación muchos a muchos entre Booking y Room
+model BookingRoom {
+  id          Int     @id @default(autoincrement())
+  bookingId   Int
+  roomId      Int
+  priceAtTime Int
+  booking     Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  room        Room    @relation(fields: [roomId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([bookingId, roomId]) // Asegura que no haya duplicados
 }
