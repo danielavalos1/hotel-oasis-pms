@@ -22,6 +22,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { useSession } from "next-auth/react";
 
 interface NavItemProps {
   href: string;
@@ -54,6 +55,8 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { data: session } = useSession();
+  const user = session?.user;
 
   const handleLogout = async () => {
     await signOut({
@@ -143,7 +146,15 @@ export default function DashboardLayout({
             />
           ))}
         </nav>
-        <div className="border-t p-4">
+        <div className="border-t p-4 space-y-2">
+          {user && (
+            <div className="px-2 pb-2 flex items-center gap-2">
+              <p className="text-sm font-medium">{user.username}</p>
+              <p className="text-xs text-muted-foreground capitalize">
+                {user.role}
+              </p>
+            </div>
+          )}
           <Button
             variant="ghost"
             size="sm"
