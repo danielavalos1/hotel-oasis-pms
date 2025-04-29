@@ -44,4 +44,9 @@ export const guestService = {
       },
     });
   },
+
+  // Count total guests
+  async countGuests(): Promise<number> {
+    return await prisma.guest.count();
+  },
 };
