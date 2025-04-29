@@ -28,8 +28,15 @@ type ApiResponse = {
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-export function GuestsList() {
-  const { data, error, isLoading } = useSWR<ApiResponse>("/api/guests", fetcher);
+type GuestsListProps = {
+  searchQuery?: string;
+};
+
+export function GuestsList({ searchQuery = "" }: GuestsListProps) {
+  const url = searchQuery
+    ? `/api/guests?search=${encodeURIComponent(searchQuery)}`
+    : "/api/guests";
+  const { data, error, isLoading } = useSWR<ApiResponse>(url, fetcher);
 
   if (error) return <div>Error loading guests</div>;
   if (isLoading) return <div>Loading...</div>;
@@ -37,17 +44,16 @@ export function GuestsList() {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Guests</h2>
-        <Button>Add Guest</Button>
+        <h2 className="text-2xl font-bold">Huéspedes</h2>
       </div>
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Phone</TableHead>
-            <TableHead>Address</TableHead>
-            <TableHead>Actions</TableHead>
+            <TableHead>Nombre</TableHead>
+            <TableHead>Correo</TableHead>
+            <TableHead>Teléfono</TableHead>
+            <TableHead>Dirección</TableHead>
+            <TableHead>Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
