@@ -47,6 +47,7 @@ interface AvailableRoomApi {
   roomNumber: string;
   roomType: string;
   pricePerNight: string;
+  capacity: number;
 }
 
 // Esquema de validación para el formulario
@@ -116,6 +117,43 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
   const checkOutValue = form.watch("checkOut");
   const adultsValue = form.watch("adults");
   const childrenValue = form.watch("children");
+
+  // Capacidad base por habitación (puede venir de RoomOption)
+  const getRoomCapacity = (roomId: string) => {
+    const room = availableRooms.find(r => r.id.toString() === roomId);
+    return room?.capacity ?? 2; // fallback a 2 si no se encuentra
+  };
+
+  // Suma la capacidad total de las habitaciones seleccionadas
+  const totalCapacity = fields.reduce((sum, _, index) => {
+    const id = form.getValues(`rooms.${index}.roomId`);
+    return sum + getRoomCapacity(id);
+  }, 0);
+
+  // Suma total de huéspedes
+  const totalGuests = Number(adultsValue) + Number(childrenValue);
+
+  // Alerta si la capacidad es insuficiente
+  useEffect(() => {
+    if (fields.length > 0 && totalCapacity < totalGuests) {
+      toast.warning(`La capacidad total de las habitaciones seleccionadas (${totalCapacity}) es menor que el número de huéspedes (${totalGuests}). Añade más habitaciones.`);
+    }
+  }, [fields.length, totalCapacity, totalGuests]);
+
+  // Al eliminar una habitación, verifica la capacidad
+  const handleRemoveRoom = (index: number) => {
+    remove(index);
+    setTimeout(() => {
+      const newCapacity = fields.reduce((sum, _, idx) => {
+        if (idx === index) return sum; // omitida
+        const id = form.getValues(`rooms.${idx}.roomId`);
+        return sum + getRoomCapacity(id);
+      }, 0);
+      if (newCapacity < totalGuests) {
+        toast.warning(`La capacidad total de las habitaciones seleccionadas (${newCapacity}) es menor que el número de huéspedes (${totalGuests}). Añade más habitaciones.`);
+      }
+    }, 100);
+  };
 
   // Preparar los datos para enviar al API
   const formatBookingData = (data: BookingFormValues): FormattedBookingPayload => {
@@ -226,6 +264,7 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
                 roomNumber: r.roomNumber,
                 roomType: r.roomType,
                 pricePerNight: parseFloat(r.pricePerNight),
+                capacity: r.capacity,
               }));
             setAvailableRooms(rooms);
             if (!rooms.length) {
@@ -506,7 +545,7 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
                       <div className="flex justify-between items-center gap-2 flex-wrap">
                         <h4 className="font-semibold text-base">Habitación {index + 1}</h4>
                         {fields.length > 1 && (
-                          <Button variant="outline" size="sm" onClick={() => remove(index)}>
+                          <Button variant="outline" size="sm" onClick={() => handleRemoveRoom(index)}>
                             Eliminar
                           </Button>
                         )}
@@ -565,6 +604,9 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
                 <Button type="button" variant="outline" onClick={() => append({ roomType: "", roomId: "" })}>
                   Añadir habitación
                 </Button>
+                <div className="text-sm text-muted-foreground mt-2">
+                  Capacidad total seleccionada: <span className="font-semibold">{totalCapacity}</span> | Huéspedes: <span className="font-semibold">{totalGuests}</span>
+                </div>
               </div>
             </TabsContent>
 

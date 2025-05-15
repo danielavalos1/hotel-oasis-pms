@@ -16,6 +16,7 @@ export interface RoomOption {
   roomNumber: string;
   roomType: string;
   pricePerNight: number;
+  capacity: number;
 }
 
 export interface FormattedBookingPayload {
