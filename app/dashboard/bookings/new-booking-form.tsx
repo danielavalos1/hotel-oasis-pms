@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useFieldArray } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -29,7 +30,40 @@ import { useForm } from "react-hook-form";
 import { CalendarIcon } from "lucide-react";
 import { cn, formatDate } from "@/lib/utils";
 import { toast } from "sonner";
-import { Room } from "@prisma/client";
+import { AutocompleteGuest } from "@/components/ui/autocomplete-guest";
+import { useGuestSearch } from "@/hooks/use-guest-search";
+import { 
+  BookingFormValues, 
+  RoomOption, 
+  FormattedBookingPayload,
+  roomTypeLabels 
+} from "@/types/booking-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+
+// Tipo para la respuesta de API de habitaciones disponibles
+interface AvailableRoomApi {
+  id: number;
+  roomNumber: string;
+  roomType: string;
+  pricePerNight: string;
+}
+
+// Esquema de validación para el formulario
+const bookingFormSchema = z.object({
+  guestName: z.string().min(2, "El nombre es obligatorio"),
+  guestEmail: z.string().email("Email inválido"),
+  guestPhone: z.string().min(10, "El teléfono es obligatorio"),
+  checkIn: z.date({ required_error: "La fecha de llegada es obligatoria" }),
+  checkOut: z.date({ required_error: "La fecha de salida es obligatoria" }),
+  adults: z.string().min(1, "Seleccione el número de adultos"),
+  children: z.string(),
+  rooms: z.array(z.object({
+    roomType: z.string().min(1, "Seleccione el tipo de habitación"),
+    roomId: z.string().min(1, "Debe seleccionar una habitación"),
+  })).min(1, "Debe añadir al menos una habitación"),
+  notes: z.string().optional(),
+});
 
 interface NewBookingFormProps {
   onSuccess: () => void;
@@ -38,35 +72,122 @@ interface NewBookingFormProps {
 export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
   const [activeTab, setActiveTab] = useState("details");
   const [isLoading, setIsLoading] = useState(false);
-  const [availableRooms, setAvailableRooms] = useState<
-    Array<{ id: number; roomNumber: string; roomType: Room["roomType"]; pricePerNight: number }>
-  >([]);
+  const [availableRooms, setAvailableRooms] = useState<RoomOption[]>([]);
+  const [isSearchingRooms, setIsSearchingRooms] = useState(false);
 
-  const form = useForm({
+  // Estado para controlar el popover de los calendarios (debe estar solo una vez)
+  const [openCheckIn, setOpenCheckIn] = useState(false);
+  const [openCheckOut, setOpenCheckOut] = useState(false);
+
+  // Hook personalizado para la búsqueda de huéspedes
+  const { 
+    selectedGuest, 
+    searchInput,
+    searchResults,
+    isSearching, 
+    searchGuests, 
+    selectGuest 
+  } = useGuestSearch();
+
+  // Inicializar el formulario con validación
+  const form = useForm<BookingFormValues>({
+    resolver: zodResolver(bookingFormSchema),
     defaultValues: {
       guestName: "",
       guestEmail: "",
       guestPhone: "",
-      checkIn: null as Date | null,
-      checkOut: null as Date | null,
+      checkIn: null,
+      checkOut: null,
       adults: "1",
       children: "0",
-      roomType: "",
-      roomId: "",
+      rooms: [{ roomType: "", roomId: "" }],
       notes: "",
     },
   });
 
-  const onSubmit = async (data: any) => {
-    setIsLoading(true);
+  // Field array for multiple rooms
+  const { fields, append, remove, replace } = useFieldArray({
+    control: form.control,
+    name: "rooms",
+  });
 
-    // Simulate API call
-    setTimeout(() => {
-      console.log("Booking data:", data);
-      setIsLoading(false);
+  // Valores de watch para efectos
+  const checkInValue = form.watch("checkIn");
+  const checkOutValue = form.watch("checkOut");
+  const adultsValue = form.watch("adults");
+  const childrenValue = form.watch("children");
+
+  // Preparar los datos para enviar al API
+  const formatBookingData = (data: BookingFormValues): FormattedBookingPayload => {
+    const checkInStr = data.checkIn ? data.checkIn.toISOString().split('T')[0] : '';
+    const checkOutStr = data.checkOut ? data.checkOut.toISOString().split('T')[0] : '';
+    
+    // Calcular el número de noches
+    const nights = data.checkIn && data.checkOut 
+      ? Math.ceil((data.checkOut.getTime() - data.checkIn.getTime()) / (1000 * 60 * 60 * 24))
+      : 1;
+    
+    // Construir arreglo de rooms con precios
+    const roomsPayload = data.rooms.map((r) => {
+      const sel = availableRooms.find(ar => ar.id.toString() === r.roomId);
+      return { roomId: sel ? sel.id : 0, priceAtTime: sel ? sel.pricePerNight : 0 };
+    });
+    const totalPrice = roomsPayload.reduce((sum, r) => sum + r.priceAtTime * nights, 0);
+
+    // Preparar payload adaptado al formato que espera el API
+    return {
+      rooms: roomsPayload,
+      checkInDate: checkInStr,
+      checkOutDate: checkOutStr,
+      totalPrice,
+      status: "confirmed",
+      numberOfGuests: Number(data.adults) + Number(data.children || "0"),
+      guest: selectedGuest 
+        ? { id: selectedGuest.id }
+        : {
+            firstName: data.guestName.split(" ")[0] || data.guestName,
+            lastName: data.guestName.split(" ").slice(1).join(" ") || "",
+            email: data.guestEmail,
+            phoneNumber: data.guestPhone,
+          },
+    };
+  };
+
+  const onSubmit = async (data: BookingFormValues) => {
+    try {
+      setIsLoading(true);
+      
+      // Construir payload para multi-room API (agrupa por tipo y cantidad)
+      const basePayload = formatBookingData(data);
+      const counts: Record<string, number> = {};
+      data.rooms.forEach(r => {
+        counts[r.roomType] = (counts[r.roomType] || 0) + 1;
+      });
+      const rooms = Object.entries(counts).map(([roomType, quantity]) => ({ roomType, quantity }));
+      const payload = { ...basePayload, rooms };
+      
+      // Llamada al nuevo endpoint multi-room
+      const response = await fetch('/api/bookings/multi-room', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Error al crear la reserva');
+      }
+
       toast.success("Reserva creada exitosamente");
+      form.reset();
       onSuccess();
-    }, 1000);
+    } catch (error) {
+      console.error("Error al crear reserva:", error);
+      toast.error(error instanceof Error ? error.message : "Error al procesar la reserva");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const getNextTab = () => {
@@ -75,49 +196,75 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
     return "details";
   };
 
-  // Fetch available rooms cuando fechas y tipo cambian
+  // Manejar cuando se selecciona un huésped
   useEffect(() => {
-    const checkIn = form.getValues("checkIn");
-    const checkOut = form.getValues("checkOut");
-    const type = form.watch("roomType");
-    if (checkIn && checkOut && type) {
+    if (selectedGuest) {
+      form.setValue("guestName", `${selectedGuest.firstName} ${selectedGuest.lastName}`);
+      form.setValue("guestEmail", selectedGuest.email);
+      form.setValue("guestPhone", selectedGuest.phoneNumber || "");
+    }
+  }, [selectedGuest, form]);
+
+  // Fetch available rooms cuando fechas cambian
+  useEffect(() => {
+    const checkIn = checkInValue;
+    const checkOut = checkOutValue;
+    
+    if (checkIn && checkOut) {
+      setIsSearchingRooms(true);
       const start = checkIn.toISOString().split("T")[0];
       const end = checkOut.toISOString().split("T")[0];
+      
       fetch(`/api/rooms?startDate=${start}&endDate=${end}`)
         .then((res) => res.json())
-        .then((res: { success: boolean; data: any[] }) => {
+        .then((res: { success: boolean; data: AvailableRoomApi[] }) => {
           if (res.success) {
-            // Mapear y filtrar habitaciones por tipo exacto, incluyendo pricePerNight
-            setAvailableRooms(
-              res.data
-                .map((r) => ({
-                  id: r.id,
-                  roomNumber: r.roomNumber,
-                  roomType: r.roomType,
-                  pricePerNight: parseFloat(r.pricePerNight),
-                }))
-                .filter((r) => r.roomType === type)
-            );
+            // Mapear todas habitaciones disponibles
+            const rooms = res.data
+              .map((r) => ({
+                id: r.id,
+                roomNumber: r.roomNumber,
+                roomType: r.roomType,
+                pricePerNight: parseFloat(r.pricePerNight),
+              }));
+            setAvailableRooms(rooms);
+            if (!rooms.length) {
+              toast.warning("No hay habitaciones disponibles para las fechas seleccionadas");
+            }
           }
+        })
+        .catch(error => {
+          console.error("Error fetching rooms:", error);
+          toast.error("Error al buscar habitaciones disponibles");
+        })
+        .finally(() => {
+          setIsSearchingRooms(false);
         });
     } else {
       setAvailableRooms([]);
     }
-  }, [form.watch("checkIn"), form.watch("checkOut"), form.watch("roomType")]);
+  }, [checkInValue, checkOutValue]);
 
-  // Label para tipos
-  const roomTypeLabels: Record<string, string> = {
-    SENCILLA: "Sencilla",
-    SENCILLA_ESPECIAL: "Sencilla Especial",
-    DOBLE: "Doble",
-    DOBLE_ESPECIAL: "Doble Especial",
-    SUITE_A: "Suite A",
-    SUITE_B: "Suite B",
-  };
-  // Selección de habitación active
-  const selectedRoom = availableRooms.find(
-    (r) => r.id.toString() === form.watch("roomId")
-  );
+  // Auto-ajustar número de habitaciones según huespedes (capacidad base 2)
+  useEffect(() => {
+    const adults = Number(adultsValue);
+    const children = Number(childrenValue);
+    const totalGuests = adults + children;
+    const roomsCount = Math.max(1, Math.ceil(totalGuests / 2));
+    if (fields.length !== roomsCount) {
+      replace(Array(roomsCount).fill({ roomType: "", roomId: "" }));
+    }
+  }, [adultsValue, childrenValue, fields.length, replace]);
+
+  // Calcular noches y precio total para UI
+  const nights = checkInValue && checkOutValue
+    ? Math.ceil((checkOutValue.getTime() - checkInValue.getTime()) / (1000 * 60 * 60 * 24))
+    : 0;
+  const totalPrice = fields.reduce((sum, _, index) => {
+    const id = form.getValues(`rooms.${index}.roomId`);
+    const room = availableRooms.find(r => r.id.toString() === id);
+    return sum + (room ? room.pricePerNight * nights : 0);
+  }, 0);
 
   return (
     <div className="space-y-6">
@@ -131,16 +278,31 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <TabsContent value="details" className="space-y-4">
+              <FormItem>
+                <FormLabel>Buscar huésped</FormLabel>
+                <AutocompleteGuest
+                  value={selectedGuest}
+                  onChange={selectGuest}
+                  onInputChange={searchGuests}
+                  inputValue={searchInput}
+                  isLoading={isSearching}
+                  results={searchResults}
+                  placeholder="Buscar por nombre, apellido o email"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Busca un huésped existente o ingresa los datos a continuación para un nuevo huésped
+                </p>
+              </FormItem>
+
               <div className="grid md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="guestName"
-                  rules={{ required: "El nombre es obligatorio" }}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Nombre</FormLabel>
+                      <FormLabel>Nombre completo</FormLabel>
                       <FormControl>
-                        <Input placeholder="Nombre completo" {...field} />
+                        <Input placeholder="Nombre y apellido" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -149,13 +311,6 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
                 <FormField
                   control={form.control}
                   name="guestEmail"
-                  rules={{
-                    required: "El email es obligatorio",
-                    pattern: {
-                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                      message: "Email inválido",
-                    },
-                  }}
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Email</FormLabel>
@@ -171,7 +326,6 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
               <FormField
                 control={form.control}
                 name="guestPhone"
-                rules={{ required: "El teléfono es obligatorio" }}
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Teléfono</FormLabel>
@@ -187,17 +341,16 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
                 <FormField
                   control={form.control}
                   name="checkIn"
-                  rules={{ required: "La fecha de llegada es obligatoria" }}
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
                       <FormLabel>Fecha de llegada</FormLabel>
-                      <Popover>
+                      <Popover open={openCheckIn} onOpenChange={setOpenCheckIn}>
                         <PopoverTrigger asChild>
                           <FormControl>
                             <Button
                               variant={"outline"}
                               className={cn(
-                                "pl-3 text-left font-normal",
+                                "w-full pl-3 text-left font-normal flex h-10 items-center",
                                 !field.value && "text-muted-foreground"
                               )}
                             >
@@ -214,8 +367,14 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
                           <Calendar
                             mode="single"
                             selected={field.value || undefined}
-                            onSelect={field.onChange}
+                            onSelect={date => {
+                              console.log("[Calendar] Día seleccionado (checkIn):", date);
+                              field.onChange(date);
+                              if (date) setOpenCheckIn(false);
+                            }}
                             initialFocus
+                            disabled={date => date < new Date(new Date().setHours(0,0,0,0))}
+                            className="rounded-md border shadow-sm bg-background"
                           />
                         </PopoverContent>
                       </Popover>
@@ -227,17 +386,16 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
                 <FormField
                   control={form.control}
                   name="checkOut"
-                  rules={{ required: "La fecha de salida es obligatoria" }}
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
                       <FormLabel>Fecha de salida</FormLabel>
-                      <Popover>
+                      <Popover open={openCheckOut} onOpenChange={setOpenCheckOut}>
                         <PopoverTrigger asChild>
                           <FormControl>
                             <Button
                               variant={"outline"}
                               className={cn(
-                                "pl-3 text-left font-normal",
+                                "w-full pl-3 text-left font-normal flex h-10 items-center",
                                 !field.value && "text-muted-foreground"
                               )}
                             >
@@ -254,13 +412,21 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
                           <Calendar
                             mode="single"
                             selected={field.value || undefined}
-                            onSelect={field.onChange}
+                            onSelect={date => {
+                              console.log("[Calendar] Día seleccionado (checkOut):", date);
+                              field.onChange(date);
+                              if (date) setOpenCheckOut(false);
+                            }}
                             initialFocus
-                            disabled={(date) =>
-                              form.getValues("checkIn")
-                                ? date < form.getValues("checkIn")!
-                                : false
-                            }
+                            fromDate={form.getValues("checkIn") ? new Date(form.getValues("checkIn")!.getTime() + 86400000) : new Date()}
+                            disabled={date => {
+                              const checkIn = form.getValues("checkIn");
+                              if (checkIn) {
+                                return date <= checkIn;
+                              }
+                              return date < new Date(new Date().setHours(0,0,0,0));
+                            }}
+                            className="rounded-md border shadow-sm bg-background"
                           />
                         </PopoverContent>
                       </Popover>
@@ -294,6 +460,7 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
                           ))}
                         </SelectContent>
                       </Select>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -321,6 +488,7 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
                           ))}
                         </SelectContent>
                       </Select>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -328,93 +496,77 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
             </TabsContent>
 
             <TabsContent value="room" className="space-y-4">
-              <FormField
-                control={form.control}
-                name="roomType"
-                rules={{ required: "El tipo de habitación es obligatorio" }}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tipo de habitación</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccionar tipo de habitación" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="SENCILLA">Sencilla</SelectItem>
-                        <SelectItem value="SENCILLA_ESPECIAL">Sencilla Especial</SelectItem>
-                        <SelectItem value="DOBLE">Doble</SelectItem>
-                        <SelectItem value="DOBLE_ESPECIAL">Doble Especial</SelectItem>
-                        <SelectItem value="SUITE_A">Suite A</SelectItem>
-                        <SelectItem value="SUITE_B">Suite B</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Selección de habitación disponible */}
-              <FormField
-                control={form.control}
-                name="roomId"
-                rules={{ required: "Debe seleccionar una habitación" }}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Habitación disponible</FormLabel>
-                    <FormControl>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue
-                              placeholder={
-                                availableRooms.length
-                                  ? "Seleccionar habitación"
-                                  : "No hay disponibles"
-                              }
-                            />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {availableRooms.map((r) => (
-                            <SelectItem key={r.id} value={r.id.toString()}>
-                              {r.roomNumber}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="grid grid-cols-1 gap-4">
-                {selectedRoom && (
-                  <div className="border rounded-md p-4">
-                    <h3 className="font-medium mb-2">
-                      {roomTypeLabels[selectedRoom.roomType]}
-                    </h3>
-                    <div className="text-sm text-muted-foreground mb-4">
-                      {/* opcional: descripción por tipo */}
-                    </div>
+              {/* Multiples habitaciones */}
+              {fields.map((field, index) => {
+                const selectedType = form.watch(`rooms.${index}.roomType`);
+                const options = availableRooms.filter(r => r.roomType === selectedType);
+                return (
+                  <div key={field.id} className="border p-4 rounded space-y-2">
                     <div className="flex justify-between">
-                      <span>Precio por noche:</span>
-                      <span className="font-medium">
-                        ${selectedRoom.pricePerNight.toFixed(2)}
-                      </span>
+                      <h4>Habitación {index + 1}</h4>
+                      {fields.length > 1 && (
+                        <Button variant="outline" size="sm" onClick={() => remove(index)}>
+                          Eliminar
+                        </Button>
+                      )}
                     </div>
+                    <FormField
+                      control={form.control}
+                      name={`rooms.${index}.roomType`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Tipo</FormLabel>
+                          <FormControl>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Tipo de habitación" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {Object.entries(roomTypeLabels).map(([v, label]) => (
+                                  <SelectItem key={v} value={v}>{label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`rooms.${index}.roomId`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Habitación</FormLabel>
+                          <FormControl>
+                            <Select onValueChange={field.onChange} value={field.value} disabled={!options.length}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder={isSearchingRooms ? "Buscando..." : options.length ? "Seleccionar habitación" : "Sin opciones"} />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {options.map(r => (
+                                  <SelectItem key={r.id} value={r.id.toString()}>
+                                    {r.roomNumber} - ${r.pricePerNight.toFixed(2)}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
-                )}
-              </div>
-
+                );
+              })}
+              <Button type="button" variant="outline" onClick={() => append({ roomType: "", roomId: "" })}>
+                Añadir habitación
+              </Button>
+              {/* Notas especiales */}
               <FormField
                 control={form.control}
                 name="notes"
@@ -438,7 +590,11 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
                 <div className="space-y-2 mb-4">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Huésped:</span>
-                    <span>{form.getValues("guestName") || "-"}</span>
+                    <span className="font-medium">{form.getValues("guestName") || "-"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Email:</span>
+                    <span>{form.getValues("guestEmail") || "-"}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Check-in:</span>
@@ -457,31 +613,48 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Habitación:</span>
+                    <span className="text-muted-foreground">Duración:</span>
                     <span>
-                      {roomTypeLabels[selectedRoom?.roomType || ""] || "-"}
+                      {nights} {nights === 1 ? "noche" : "noches"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Habitaciones:</span>
+                    <span>
+                      {fields.map((_, index) => {
+                        const roomId = form.getValues(`rooms.${index}.roomId`);
+                        const room = availableRooms.find(r => r.id.toString() === roomId);
+                        return room 
+                          ? `${room.roomNumber} (${roomTypeLabels[room.roomType] || room.roomType})`
+                          : "-";
+                      }).join(", ")}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Huéspedes:</span>
                     <span>
-                      {form.getValues("adults") || 0} adultos,{" "}
-                      {form.getValues("children") || 0} niños
+                      {form.getValues("adults") || 0} adultos
+                      {Number(form.getValues("children")) > 0 
+                        ? `, ${form.getValues("children")} niños` 
+                        : ""}
                     </span>
                   </div>
                 </div>
                 <div className="border-t pt-4 mt-4">
                   <div className="flex justify-between font-medium">
                     <span>Total:</span>
-                    <span>
-                      {form.watch("checkIn") && form.watch("checkOut") && selectedRoom
-                        ? `$${(
-                            ((form.watch("checkOut")!.getTime() - form.watch("checkIn")!.getTime()) /
-                              (1000 * 60 * 60 * 24) || 1) *
-                            selectedRoom.pricePerNight
-                          ).toFixed(2)}`
-                        : "-"}
+                    <span className="text-lg">
+                      ${totalPrice.toFixed(2)}
                     </span>
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1 text-right">
+                    {fields.map((_, index) => {
+                      const roomId = form.getValues(`rooms.${index}.roomId`);
+                      const room = availableRooms.find(r => r.id.toString() === roomId);
+                      return room 
+                        ? `${room.pricePerNight.toFixed(2)} × ${nights} noches`
+                        : "";
+                    }).join(", ")}
                   </div>
                 </div>
               </div>
@@ -511,7 +684,28 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
               )}
 
               {activeTab !== "payment" ? (
-                <Button type="button" onClick={() => setActiveTab(getNextTab())}>
+                <Button
+                  type="button"
+                  onClick={async () => {
+                    // Validar detalles
+                    if (activeTab === "details") {
+                      const ok = await form.trigger([
+                        "guestName","guestEmail","guestPhone","checkIn","checkOut"
+                      ]);
+                      if (!ok) return;
+                    }
+                    // Validar habitaciones
+                    if (activeTab === "room") {
+                      const triggers = fields.flatMap((_, i) => [
+                        `rooms.${i}.roomType`,
+                        `rooms.${i}.roomId`
+                      ] as const);
+                      const ok = await form.trigger(triggers);
+                      if (!ok) return;
+                    }
+                    setActiveTab(getNextTab());
+                  }}
+                >
                   Continuar
                 </Button>
               ) : (
