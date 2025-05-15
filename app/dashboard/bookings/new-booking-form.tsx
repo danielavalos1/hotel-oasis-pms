@@ -496,92 +496,76 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
             </TabsContent>
 
             <TabsContent value="room" className="space-y-4">
-              {/* Multiples habitaciones */}
-              {fields.map((field, index) => {
-                const selectedType = form.watch(`rooms.${index}.roomType`);
-                const options = availableRooms.filter(r => r.roomType === selectedType);
-                return (
-                  <div key={field.id} className="border p-4 rounded space-y-2">
-                    <div className="flex justify-between">
-                      <h4>Habitación {index + 1}</h4>
-                      {fields.length > 1 && (
-                        <Button variant="outline" size="sm" onClick={() => remove(index)}>
-                          Eliminar
-                        </Button>
-                      )}
+              {/* Multiples habitaciones - responsivo y scrollable */}
+              <div className="flex flex-col gap-4 max-h-[60vh] md:max-h-[50vh] overflow-y-auto pr-1">
+                {fields.map((field, index) => {
+                  const selectedType = form.watch(`rooms.${index}.roomType`);
+                  const options = availableRooms.filter(r => r.roomType === selectedType);
+                  return (
+                    <div key={field.id} className="border p-4 rounded space-y-2 bg-background/80">
+                      <div className="flex justify-between items-center gap-2 flex-wrap">
+                        <h4 className="font-semibold text-base">Habitación {index + 1}</h4>
+                        {fields.length > 1 && (
+                          <Button variant="outline" size="sm" onClick={() => remove(index)}>
+                            Eliminar
+                          </Button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <FormField
+                          control={form.control}
+                          name={`rooms.${index}.roomType`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Tipo</FormLabel>
+                              <FormControl>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Tipo de habitación" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {Object.entries(roomTypeLabels).map(([v, label]) => (
+                                      <SelectItem key={v} value={v}>{label}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name={`rooms.${index}.roomId`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Habitación</FormLabel>
+                              <FormControl>
+                                <Select onValueChange={field.onChange} value={field.value} disabled={!options.length}>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder={isSearchingRooms ? "Buscando..." : options.length ? "Seleccionar habitación" : "Sin opciones"} />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {options.map(r => (
+                                      <SelectItem key={r.id} value={r.id.toString()}>
+                                        {r.roomNumber} - ${r.pricePerNight.toFixed(2)}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
                     </div>
-                    <FormField
-                      control={form.control}
-                      name={`rooms.${index}.roomType`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Tipo</FormLabel>
-                          <FormControl>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Tipo de habitación" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {Object.entries(roomTypeLabels).map(([v, label]) => (
-                                  <SelectItem key={v} value={v}>{label}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name={`rooms.${index}.roomId`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Habitación</FormLabel>
-                          <FormControl>
-                            <Select onValueChange={field.onChange} value={field.value} disabled={!options.length}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder={isSearchingRooms ? "Buscando..." : options.length ? "Seleccionar habitación" : "Sin opciones"} />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {options.map(r => (
-                                  <SelectItem key={r.id} value={r.id.toString()}>
-                                    {r.roomNumber} - ${r.pricePerNight.toFixed(2)}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                );
-              })}
-              <Button type="button" variant="outline" onClick={() => append({ roomType: "", roomId: "" })}>
-                Añadir habitación
-              </Button>
-              {/* Notas especiales */}
-              <FormField
-                control={form.control}
-                name="notes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Notas especiales</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Solicitudes especiales, alergias, etc."
-                        {...field}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
+                  );
+                })}
+                <Button type="button" variant="outline" onClick={() => append({ roomType: "", roomId: "" })}>
+                  Añadir habitación
+                </Button>
+              </div>
             </TabsContent>
 
             <TabsContent value="payment" className="space-y-4">
@@ -658,14 +642,12 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
                   </div>
                 </div>
               </div>
-
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">
                   Se procesará un cargo de pre-autorización equivalente al 30%
                   del total de la reserva. El saldo restante se cargará al
                   momento del check-in.
                 </p>
-
                 {/* En un caso real aquí iría el formulario de pago */}
               </div>
             </TabsContent>
@@ -689,10 +671,10 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
                   onClick={async () => {
                     // Validar detalles
                     if (activeTab === "details") {
-                      const ok = await form.trigger([
+                      const valid = await form.trigger([
                         "guestName","guestEmail","guestPhone","checkIn","checkOut"
                       ]);
-                      if (!ok) return;
+                      if (!valid) return;
                     }
                     // Validar habitaciones
                     if (activeTab === "room") {
@@ -700,8 +682,8 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
                         `rooms.${i}.roomType`,
                         `rooms.${i}.roomId`
                       ] as const);
-                      const ok = await form.trigger(triggers);
-                      if (!ok) return;
+                      const valid = await form.trigger(triggers);
+                      if (!valid) return;
                     }
                     setActiveTab(getNextTab());
                   }}
