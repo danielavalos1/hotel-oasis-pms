@@ -29,7 +29,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useForm } from "react-hook-form";
 import { CalendarIcon } from "lucide-react";
 import { cn, formatDate } from "@/lib/utils";
-import { toast } from "sonner";
 import { AutocompleteGuest } from "@/components/ui/autocomplete-guest";
 import { useGuestSearch } from "@/hooks/use-guest-search";
 import {
@@ -40,6 +39,8 @@ import {
 } from "@/types/booking-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { RoomType } from "@prisma/client";
+import { useToast } from "@/hooks/use-toast";
 
 // Esquema de validación para el formulario
 const bookingFormSchema = z.object({
@@ -137,9 +138,11 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
   // Alerta si la capacidad es insuficiente
   useEffect(() => {
     if (fields.length > 0 && totalCapacity < totalGuests) {
-      toast.warning(
-        `La capacidad total de las habitaciones seleccionadas (${totalCapacity}) es menor que el número de huéspedes (${totalGuests}). Añade más habitaciones.`
-      );
+      toast({
+        title: "Capacidad insuficiente",
+        description: `La capacidad total de las habitaciones seleccionadas (${totalCapacity}) es menor que el número de huéspedes (${totalGuests}). Añade más habitaciones.`,
+        variant: "destructive",
+      });
     }
   }, [fields.length, totalCapacity, totalGuests]);
 
@@ -153,9 +156,11 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
         return sum + getRoomCapacity(id);
       }, 0);
       if (newCapacity < totalGuests) {
-        toast.warning(
-          `La capacidad total de las habitaciones seleccionadas (${newCapacity}) es menor que el número de huéspedes (${totalGuests}). Añade más habitaciones.`
-        );
+        toast({
+          title: "Capacidad insuficiente",
+          description: `La capacidad total de las habitaciones seleccionadas (${newCapacity}) es menor que el número de huéspedes (${totalGuests}). Añade más habitaciones.`,
+          variant: "destructive",
+        });
       }
     }, 100);
   };
@@ -212,20 +217,35 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
     };
   };
 
+  const { toast } = useToast();
+
   const onSubmit = async (data: BookingFormValues) => {
     try {
       setIsLoading(true);
 
       // Construir payload para multi-room API (agrupa por tipo y cantidad)
       const basePayload = formatBookingData(data);
+      // Solo contar habitaciones con roomType válido
       const counts: Record<string, number> = {};
       data.rooms.forEach((r) => {
-        counts[r.roomType] = (counts[r.roomType] || 0) + 1;
+        if (r.roomType && r.roomType !== "") {
+          // Asegura que el roomType sea el valor del enum (mayúsculas)
+          const typeKey = r.roomType.toUpperCase() as RoomType;
+          counts[typeKey] = (counts[typeKey] || 0) + 1;
+        }
       });
-      const rooms = Object.entries(counts).map(([roomType, quantity]) => ({
-        roomType,
-        quantity,
-      }));
+      // Solo incluir roomTypes válidos
+      const rooms = Object.entries(counts)
+        .filter(([roomType]) => !!roomType)
+        .map(([roomType, quantity]) => ({
+          roomType,
+          quantity,
+        }));
+      if (rooms.length === 0) {
+        throw new Error(
+          "Debes seleccionar al menos un tipo de habitación válido"
+        );
+      }
       const payload = { ...basePayload, rooms };
 
       // Llamada al nuevo endpoint multi-room
@@ -241,14 +261,23 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
         throw new Error(result.error || "Error al crear la reserva");
       }
 
-      toast.success("Reserva creada exitosamente");
+      toast({
+        title: "Reserva creada",
+        description: "La reserva se creó exitosamente.",
+        variant: "default",
+      });
       form.reset();
       onSuccess();
     } catch (error) {
+      toast({
+        title: "Error al crear reserva",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Error al procesar la reserva",
+        variant: "destructive",
+      });
       console.error("Error al crear reserva:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Error al procesar la reserva"
-      );
     } finally {
       setIsLoading(false);
     }
@@ -847,18 +876,24 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
                           setAvailableRooms(res.data);
                           setCanSelectRooms(true);
                           if (!res.data.length) {
-                            toast.warning(
-                              "No hay habitaciones disponibles para las fechas y huéspedes seleccionados"
-                            );
+                            toast({
+                              title: "Advertencia",
+                              description:
+                                "No hay habitaciones disponibles para las fechas y huéspedes seleccionados",
+                              variant: "destructive",
+                            });
                             return;
                           }
                           setActiveTab("room");
                         } else {
                           setAvailableRooms([]);
                           setCanSelectRooms(false);
-                          toast.error(
-                            "Error al buscar habitaciones disponibles"
-                          );
+                          toast({
+                            title: "Error",
+                            description:
+                              "Error al buscar habitaciones disponibles",
+                            variant: "destructive",
+                          });
                           return;
                         }
                         setIsSearchingRooms(false);
