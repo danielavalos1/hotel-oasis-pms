@@ -204,7 +204,7 @@ export function BookingsTable({
                     : "Cancelada"}
                 </Badge>
               </TableCell>
-              <TableCell>${booking.totalAmount.toFixed(2)}</TableCell>
+              <TableCell>${booking.totalAmount}</TableCell>
               <TableCell>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
