@@ -77,7 +77,6 @@ export const roomService = {
   async getAvailableRoomsByType({
     checkIn,
     checkOut,
-    guests,
     roomType,
   }: RoomAvailabilityParams): Promise<AvailableRoomsByType[]> {
     // Find bookings that overlap with the requested dates
@@ -131,7 +130,6 @@ export const roomService = {
           id: { in: notInCondition },
         },
         ...(roomType && { type: roomType }),
-        ...(guests && { capacity: { gte: guests } }),
         isAvailable: true,
       },
       _count: {
@@ -150,7 +148,6 @@ export const roomService = {
             NOT: {
               id: { in: notInCondition },
             },
-            ...(guests && { capacity: { gte: guests } }),
             isAvailable: true,
           },
           select: {
