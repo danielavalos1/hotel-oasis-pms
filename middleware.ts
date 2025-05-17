@@ -11,6 +11,11 @@ function isPublicPath(path: string) {
 
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
+
+  // Permitir todas las preflight OPTIONS para CORS sin autenticación ni bloqueo
+  if (request.method === "OPTIONS") {
+    return NextResponse.next();
+  }
   const token = await getToken({ req: request });
 
   // Manejo de rutas API
