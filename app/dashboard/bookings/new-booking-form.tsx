@@ -41,15 +41,6 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
-// Tipo para la respuesta de API de habitaciones disponibles
-interface AvailableRoomApi {
-  id: number;
-  roomNumber: string;
-  roomType: string;
-  pricePerNight: string;
-  capacity: number;
-}
-
 // Esquema de validación para el formulario
 const bookingFormSchema = z.object({
   guestName: z.string().min(2, "El nombre es obligatorio"),
@@ -243,32 +234,30 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
     }
   }, [selectedGuest, form]);
 
-  // Fetch available rooms cuando fechas cambian
+  // Fetch available rooms cuando fechas o huéspedes cambian
   useEffect(() => {
     const checkIn = checkInValue;
     const checkOut = checkOutValue;
-    
-    if (checkIn && checkOut) {
+    const adults = Number(adultsValue);
+    const children = Number(childrenValue);
+    const totalGuests = adults + children;
+
+    if (checkIn && checkOut && totalGuests > 0) {
       setIsSearchingRooms(true);
       const start = checkIn.toISOString().split("T")[0];
       const end = checkOut.toISOString().split("T")[0];
-      
-      fetch(`/api/rooms?startDate=${start}&endDate=${end}`)
+      const url = `/api/rooms/available?checkIn=${start}&checkOut=${end}&guests=${totalGuests}`;
+      fetch(url, {
+        headers: {
+          "x-api-key": process.env.NEXT_PUBLIC_API_KEY || "key1"
+        }
+      })
         .then((res) => res.json())
-        .then((res: { success: boolean; data: AvailableRoomApi[] }) => {
+        .then((res: { success: boolean; data: RoomOption[] }) => {
           if (res.success) {
-            // Mapear todas habitaciones disponibles
-            const rooms = res.data
-              .map((r) => ({
-                id: r.id,
-                roomNumber: r.roomNumber,
-                roomType: r.roomType,
-                pricePerNight: parseFloat(r.pricePerNight),
-                capacity: r.capacity,
-              }));
-            setAvailableRooms(rooms);
-            if (!rooms.length) {
-              toast.warning("No hay habitaciones disponibles para las fechas seleccionadas");
+            setAvailableRooms(res.data);
+            if (!res.data.length) {
+              toast.warning("No hay habitaciones disponibles para las fechas y huéspedes seleccionados");
             }
           }
         })
@@ -282,7 +271,7 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
     } else {
       setAvailableRooms([]);
     }
-  }, [checkInValue, checkOutValue]);
+  }, [checkInValue, checkOutValue, adultsValue, childrenValue]);
 
   // Auto-ajustar número de habitaciones según huespedes (capacidad base 2)
   useEffect(() => {
