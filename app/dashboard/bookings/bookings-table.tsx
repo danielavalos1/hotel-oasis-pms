@@ -43,18 +43,25 @@ interface BookingsTableProps {
   };
 }
 
-// Status badge variants
+// Status badge variants y traducción
 const statusVariants = {
   confirmed: "bg-green-100 text-green-800 hover:bg-green-100/80",
   "checked-in": "bg-blue-100 text-blue-800 hover:bg-blue-100/80",
   "checked-out": "bg-gray-100 text-gray-800 hover:bg-gray-100/80",
   cancelled: "bg-red-100 text-red-800 hover:bg-red-100/80",
 };
+const statusLabels: Record<string, string> = {
+  confirmed: "Confirmada",
+  "checked-in": "Check-in",
+  "checked-out": "Check-out",
+  cancelled: "Cancelada",
+};
 
 export function BookingsTable({
   searchQuery = "",
   dateRange,
-}: BookingsTableProps) {
+  statusFilter,
+}: BookingsTableProps & { statusFilter?: string }) {
   const [pageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   // Construir query params para API
@@ -126,21 +133,24 @@ export function BookingsTable({
   }
   // Datos reales
   let allBookings = data.data;
-  // Aplicar búsqueda
+  // Filtro de búsqueda
   if (searchQuery.trim()) {
     const q = searchQuery.toLowerCase();
     allBookings = allBookings.filter(
       (b) =>
         b.guestName.toLowerCase().includes(q) ||
-        b.id.toLowerCase().includes(q) ||
-        b.roomNumber.includes(q)
+        b.id.toString().toLowerCase().includes(q) ||
+        b.roomNumber.toLowerCase().includes(q)
     );
   }
-  // Aplicar filtros de fecha en caso de sólo un extremo
-  if (
-    (dateRange?.from && !dateRange.to) ||
-    (!dateRange?.from && dateRange?.to)
-  ) {
+  // Filtro de status
+  if (statusFilter && statusFilter !== "all") {
+    allBookings = allBookings.filter(
+      (b) => b.status === statusFilter
+    );
+  }
+  // Filtros de fecha en caso de solo un extremo
+  if ((dateRange?.from && !dateRange.to) || (!dateRange?.from && dateRange?.to)) {
     allBookings = allBookings.filter((b) => {
       const checkIn = new Date(b.checkIn);
       const checkOut = new Date(b.checkOut);
@@ -189,19 +199,9 @@ export function BookingsTable({
               <TableCell>
                 <Badge
                   variant="outline"
-                  className={
-                    statusVariants[
-                      booking.status as keyof typeof statusVariants
-                    ]
-                  }
+                  className={statusVariants[booking.status as keyof typeof statusVariants]}
                 >
-                  {booking.status === "checked-in"
-                    ? "Check-in"
-                    : booking.status === "checked-out"
-                    ? "Check-out"
-                    : booking.status === "confirmed"
-                    ? "Confirmada"
-                    : "Cancelada"}
+                  {statusLabels[booking.status] || booking.status}
                 </Badge>
               </TableCell>
               <TableCell>${booking.totalAmount}</TableCell>
