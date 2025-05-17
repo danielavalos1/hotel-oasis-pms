@@ -1,10 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 import { bookingService } from "@/services/bookingService";
 import { ZodError } from "zod";
-import { Prisma } from "@prisma/client";
+import {
+  Prisma,
+  RoomType,
+  Booking,
+  Guest,
+  BookingRoom,
+  Room,
+} from "@prisma/client";
 import { emailService } from "@/services/emailService";
 import { roomService } from "@/services/roomService";
-import { RoomType } from "@prisma/client";
+
+type BookingWithRelations = Booking & {
+  guest: Guest;
+  bookingRooms: (BookingRoom & { room: Room })[];
+};
+
+type BookingTableDTO = {
+  id: number;
+  guestName: string;
+  checkIn: string;
+  checkOut: string;
+  roomNumber: string;
+  status: string;
+  totalAmount: number;
+};
 
 interface RoomTypeRequest {
   roomType: RoomType;
@@ -35,20 +56,48 @@ export async function GET(request: NextRequest) {
     const endDate = searchParams.get("endDate");
     const origin = request.headers.get("origin");
 
+    function bookingToTableDTO(booking: BookingWithRelations): BookingTableDTO {
+      return {
+        id: booking.id,
+        guestName: booking.guest
+          ? `${booking.guest.firstName} ${booking.guest.lastName}`
+          : "-",
+        checkIn:
+          booking.checkInDate instanceof Date
+            ? booking.checkInDate.toISOString().split("T")[0]
+            : String(booking.checkInDate),
+        checkOut:
+          booking.checkOutDate instanceof Date
+            ? booking.checkOutDate.toISOString().split("T")[0]
+            : String(booking.checkOutDate),
+        roomNumber:
+          booking.bookingRooms && booking.bookingRooms.length > 0
+            ? booking.bookingRooms
+                .map((br) => br.room?.roomNumber)
+                .filter(Boolean)
+                .join(", ")
+            : "-",
+        status: booking.status?.toLowerCase?.() || booking.status,
+        totalAmount:
+          typeof booking.totalPrice === "object" &&
+          "toNumber" in booking.totalPrice
+            ? booking.totalPrice.toNumber()
+            : Number(booking.totalPrice),
+      };
+    }
+
+    let bookings: BookingWithRelations[];
     if (startDate && endDate) {
-      const bookings = await bookingService.getBookingsByDateRange(
+      bookings = await bookingService.getBookingsByDateRange(
         new Date(startDate),
         new Date(endDate)
       );
-      return NextResponse.json(
-        { success: true, data: bookings },
-        { headers: setCORSHeaders(origin) }
-      );
+    } else {
+      bookings = await bookingService.getAllBookings();
     }
-
-    const bookings = await bookingService.getAllBookings();
+    const data: BookingTableDTO[] = bookings.map(bookingToTableDTO);
     return NextResponse.json(
-      { success: true, data: bookings },
+      { success: true, data },
       { headers: setCORSHeaders(origin) }
     );
   } catch {
