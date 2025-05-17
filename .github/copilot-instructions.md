@@ -36,3 +36,9 @@
 ## Rendimiento y escalabilidad
 - Utilizar caching de Next.js (`revalidate`, `cache`) según corresponda.
 - Paginar conjuntos de datos grandes en rutas API con query params.
+
+## Tipado y uso de interfaces
+- Siempre que sea posible, utiliza los tipos e interfaces generados automáticamente por Prisma Client (`@prisma/client`) para modelar entidades, relaciones y DTOs en el backend y frontend.
+- Extiende o transforma estos tipos solo cuando sea necesario para la UI o para exponer datos agregados/derivados, pero evita definir interfaces duplicadas para modelos que ya existen en Prisma.
+- Si necesitas un DTO para la API, parte del tipo Prisma y omite/agrega campos según el caso, pero no redefinas la estructura base.
+- En el frontend, importa los tipos de Prisma Client (o de un archivo de tipos centralizado) para mantener la consistencia y facilitar el mantenimiento a largo plazo.
