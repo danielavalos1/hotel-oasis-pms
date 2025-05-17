@@ -317,9 +317,14 @@ export function BookingDetail({ booking }: { booking: BookingWithRelations }) {
                         </TableCell>
                         <TableCell>
                           $
-                          {typeof p.amount === "object" &&
-                          "toNumber" in p.amount
-                            ? p.amount.toNumber().toFixed(2)
+                          {p.amount !== null &&
+                          typeof p.amount === "object" &&
+                          "toNumber" in p.amount &&
+                          typeof (p.amount as { toNumber?: unknown })
+                            .toNumber === "function"
+                            ? (p.amount as { toNumber: () => number })
+                                .toNumber()
+                                .toFixed(2)
                             : Number(p.amount ?? 0).toFixed(2)}
                         </TableCell>
                       </TableRow>
