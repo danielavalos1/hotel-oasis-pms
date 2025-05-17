@@ -39,6 +39,7 @@ export default function BookingsPage() {
     to: undefined,
   });
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   return (
     <div className="w-full max-w-screen-xl mx-auto px-2 sm:px-4 md:px-6 py-4">
@@ -111,7 +112,7 @@ export default function BookingsPage() {
             </PopoverContent>
           </Popover>
 
-          <Select>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-[140px] min-w-[120px]">
               <SelectValue placeholder="Estado" />
             </SelectTrigger>
@@ -139,7 +140,11 @@ export default function BookingsPage() {
           <CardTitle className="text-lg">Lista de Reservas</CardTitle>
         </CardHeader>
         <CardContent className="p-0 overflow-x-auto">
-          <BookingsTable searchQuery={searchQuery} dateRange={dateRange} />
+          <BookingsTable
+            searchQuery={searchQuery}
+            dateRange={dateRange}
+            statusFilter={statusFilter}
+          />
         </CardContent>
       </Card>
     </div>
