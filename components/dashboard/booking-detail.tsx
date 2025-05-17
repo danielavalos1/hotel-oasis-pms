@@ -61,18 +61,23 @@ export function BookingDetail({ booking }: { booking: BookingWithRelations }) {
   );
 
   // Fallback seguro para createdAt
-  const createdAt = ("createdAt" in booking && booking.createdAt)
-    ? (typeof booking.createdAt === "string"
+  const createdAt =
+    "createdAt" in booking && booking.createdAt
+      ? typeof booking.createdAt === "string"
         ? booking.createdAt
         : booking.createdAt instanceof Date
-          ? booking.createdAt.toISOString()
-          : booking.checkInDate)
-    : booking.checkInDate;
+        ? booking.createdAt.toISOString()
+        : booking.checkInDate
+      : booking.checkInDate;
   // Fallback seguro para payments y modifications
-  const payments: Payment[] = Array.isArray((booking as Record<string, unknown>).payments)
+  const payments: Payment[] = Array.isArray(
+    (booking as Record<string, unknown>).payments
+  )
     ? ((booking as Record<string, unknown>).payments as Payment[])
     : [];
-  const modifications: Modification[] = Array.isArray((booking as Record<string, unknown>).modifications)
+  const modifications: Modification[] = Array.isArray(
+    (booking as Record<string, unknown>).modifications
+  )
     ? ((booking as Record<string, unknown>).modifications as Modification[])
     : [];
 
@@ -134,7 +139,12 @@ export function BookingDetail({ booking }: { booking: BookingWithRelations }) {
               Reserva #{booking.id}
             </CardTitle>
             <div className="text-muted-foreground text-sm mt-1">
-              Creada el {formatDate(typeof createdAt === "string" ? createdAt : createdAt.toISOString())}
+              Creada el{" "}
+              {formatDate(
+                typeof createdAt === "string"
+                  ? createdAt
+                  : createdAt.toISOString()
+              )}
             </div>
           </div>
           <Badge className="text-base px-4 py-1">
@@ -152,7 +162,8 @@ export function BookingDetail({ booking }: { booking: BookingWithRelations }) {
                 {booking.guest.firstName} {booking.guest.lastName}
               </div>
               <div>
-                <span className="font-medium">Email:</span> {booking.guest.email}
+                <span className="font-medium">Email:</span>{" "}
+                {booking.guest.email}
               </div>
               <div>
                 <span className="font-medium">Teléfono:</span>{" "}
@@ -247,10 +258,7 @@ export function BookingDetail({ booking }: { booking: BookingWithRelations }) {
           <div className="font-semibold text-lg mt-6 mb-2">Notas</div>
           {editMode ? (
             <div className="flex gap-2">
-              <Input
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-              />
+              <Input value={notes} onChange={(e) => setNotes(e.target.value)} />
               <Button onClick={handleSaveNotes} disabled={isSaving}>
                 Guardar
               </Button>
@@ -261,7 +269,9 @@ export function BookingDetail({ booking }: { booking: BookingWithRelations }) {
           ) : (
             <div className="flex gap-2 items-center">
               <span>
-                {notes || <span className="text-muted-foreground">Sin notas</span>}
+                {notes || (
+                  <span className="text-muted-foreground">Sin notas</span>
+                )}
               </span>
               <Button
                 size="sm"
@@ -286,13 +296,32 @@ export function BookingDetail({ booking }: { booking: BookingWithRelations }) {
                 </TableHeader>
                 <TableBody>
                   {payments.length === 0 ? (
-                    <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground">Sin pagos registrados</TableCell></TableRow>
+                    <TableRow>
+                      <TableCell
+                        colSpan={3}
+                        className="text-center text-muted-foreground"
+                      >
+                        Sin pagos registrados
+                      </TableCell>
+                    </TableRow>
                   ) : (
                     payments.map((p) => (
                       <TableRow key={p.id}>
                         <TableCell>{p.paymentMethod}</TableCell>
-                        <TableCell>{formatDate(typeof p.paymentDate === "string" ? p.paymentDate : p.paymentDate.toISOString())}</TableCell>
-                        <TableCell>${typeof p.amount === "object" && "toNumber" in p.amount ? p.amount.toNumber().toFixed(2) : Number(p.amount ?? 0).toFixed(2)}</TableCell>
+                        <TableCell>
+                          {formatDate(
+                            typeof p.paymentDate === "string"
+                              ? p.paymentDate
+                              : p.paymentDate.toISOString()
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          $
+                          {typeof p.amount === "object" &&
+                          "toNumber" in p.amount
+                            ? p.amount.toNumber().toFixed(2)
+                            : Number(p.amount ?? 0).toFixed(2)}
+                        </TableCell>
                       </TableRow>
                     ))
                   )}
@@ -313,11 +342,24 @@ export function BookingDetail({ booking }: { booking: BookingWithRelations }) {
                 </TableHeader>
                 <TableBody>
                   {modifications.length === 0 ? (
-                    <TableRow><TableCell colSpan={2} className="text-center text-muted-foreground">Sin modificaciones</TableCell></TableRow>
+                    <TableRow>
+                      <TableCell
+                        colSpan={2}
+                        className="text-center text-muted-foreground"
+                      >
+                        Sin modificaciones
+                      </TableCell>
+                    </TableRow>
                   ) : (
                     modifications.map((m) => (
                       <TableRow key={m.id}>
-                        <TableCell>{formatDate(typeof m.modificationDate === "string" ? m.modificationDate : m.modificationDate.toISOString())}</TableCell>
+                        <TableCell>
+                          {formatDate(
+                            typeof m.modificationDate === "string"
+                              ? m.modificationDate
+                              : m.modificationDate.toISOString()
+                          )}
+                        </TableCell>
                         <TableCell>{m.modificationDetails}</TableCell>
                       </TableRow>
                     ))
