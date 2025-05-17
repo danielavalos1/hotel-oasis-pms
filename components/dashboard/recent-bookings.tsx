@@ -8,63 +8,68 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import useSWR from "swr";
 
-const recentBookings = [
-  {
-    id: 1,
-    guest: "John Smith",
-    room: "101",
-    checkIn: "2024-03-20",
-    checkOut: "2024-03-25",
-    status: "Confirmed",
-    amount: "$750",
-  },
-  {
-    id: 2,
-    guest: "Sarah Johnson",
-    room: "205",
-    checkIn: "2024-03-21",
-    checkOut: "2024-03-23",
-    status: "Checked In",
-    amount: "$450",
-  },
-  {
-    id: 3,
-    guest: "Michael Brown",
-    room: "304",
-    checkIn: "2024-03-22",
-    checkOut: "2024-03-24",
-    status: "Pending",
-    amount: "$500",
-  },
-];
+type BookingRecent = {
+  id: number;
+  guestName: string;
+  checkIn: string;
+  checkOut: string;
+  roomNumber: string;
+  status: string;
+  totalAmount: number;
+};
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export function RecentBookings() {
+  const { data, isLoading, error } = useSWR<{ success: boolean; data: BookingRecent[] }>(
+    "/api/bookings",
+    fetcher
+  );
+  const bookings = data?.data?.slice(0, 5) || [];
+
   return (
     <div>
-      <h3 className="text-lg font-medium mb-4">Recent Bookings</h3>
+      <h3 className="text-lg font-medium mb-4">Reservas recientes</h3>
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Guest</TableHead>
-            <TableHead>Room</TableHead>
+            <TableHead>Huésped</TableHead>
+            <TableHead>Habitación</TableHead>
             <TableHead>Check In</TableHead>
             <TableHead>Check Out</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="text-right">Amount</TableHead>
+            <TableHead>Estado</TableHead>
+            <TableHead className="text-right">Total</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {recentBookings.map((booking) => (
-            <TableRow key={booking.id}>
-              <TableCell>{booking.guest}</TableCell>
-              <TableCell>{booking.room}</TableCell>
-              <TableCell>{booking.checkIn}</TableCell>
-              <TableCell>{booking.checkOut}</TableCell>
-              <TableCell>{booking.status}</TableCell>
-              <TableCell className="text-right">{booking.amount}</TableCell>
+          {isLoading ? (
+            <TableRow>
+              <TableCell colSpan={6}>Cargando...</TableCell>
             </TableRow>
-          ))}
+          ) : error ? (
+            <TableRow>
+              <TableCell colSpan={6}>Error al cargar</TableCell>
+            </TableRow>
+          ) : bookings.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={6}>Sin reservas recientes</TableCell>
+            </TableRow>
+          ) : (
+            bookings.map((booking) => (
+              <TableRow key={booking.id}>
+                <TableCell>{booking.guestName}</TableCell>
+                <TableCell>{booking.roomNumber}</TableCell>
+                <TableCell>{booking.checkIn}</TableCell>
+                <TableCell>{booking.checkOut}</TableCell>
+                <TableCell>{booking.status}</TableCell>
+                <TableCell className="text-right">
+                  ${booking.totalAmount}
+                </TableCell>
+              </TableRow>
+            ))
+          )}
         </TableBody>
       </Table>
     </div>
