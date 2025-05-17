@@ -1,7 +1,6 @@
 "use client";
 import { createContext, useContext } from "react";
 import { SessionProvider, useSession } from "next-auth/react";
-import { Session } from "next-auth";
 
 const AuthContext = createContext<{
   isAuthenticated: boolean;
@@ -31,12 +30,11 @@ function AuthStateProvider({ children }: { children: React.ReactNode }) {
 
 interface AuthProviderProps {
   children: React.ReactNode;
-  session: Session | null;
 }
 
-export function AuthProvider({ children, session }: AuthProviderProps) {
+export function AuthProvider({ children }: AuthProviderProps) {
   return (
-    <SessionProvider session={session}>
+    <SessionProvider>
       <AuthStateProvider>{children}</AuthStateProvider>
     </SessionProvider>
   );
