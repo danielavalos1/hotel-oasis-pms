@@ -66,6 +66,7 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [availableRooms, setAvailableRooms] = useState<RoomOption[]>([]);
   const [isSearchingRooms, setIsSearchingRooms] = useState(false);
+  const [canSelectRooms, setCanSelectRooms] = useState(false);
 
   // Estado para controlar el popover de los calendarios (debe estar solo una vez)
   const [openCheckIn, setOpenCheckIn] = useState(false);
@@ -219,11 +220,6 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
     }
   };
 
-  const getNextTab = () => {
-    if (activeTab === "details") return "room";
-    if (activeTab === "room") return "payment";
-    return "details";
-  };
 
   // Manejar cuando se selecciona un huésped
   useEffect(() => {
@@ -233,45 +229,6 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
       form.setValue("guestPhone", selectedGuest.phoneNumber || "");
     }
   }, [selectedGuest, form]);
-
-  // Fetch available rooms cuando fechas o huéspedes cambian
-  useEffect(() => {
-    const checkIn = checkInValue;
-    const checkOut = checkOutValue;
-    const adults = Number(adultsValue);
-    const children = Number(childrenValue);
-    const totalGuests = adults + children;
-
-    if (checkIn && checkOut && totalGuests > 0) {
-      setIsSearchingRooms(true);
-      const start = checkIn.toISOString().split("T")[0];
-      const end = checkOut.toISOString().split("T")[0];
-      const url = `/api/rooms/available?checkIn=${start}&checkOut=${end}&guests=${totalGuests}`;
-      fetch(url, {
-        headers: {
-          "x-api-key": process.env.NEXT_PUBLIC_API_KEY || "key1"
-        }
-      })
-        .then((res) => res.json())
-        .then((res: { success: boolean; data: RoomOption[] }) => {
-          if (res.success) {
-            setAvailableRooms(res.data);
-            if (!res.data.length) {
-              toast.warning("No hay habitaciones disponibles para las fechas y huéspedes seleccionados");
-            }
-          }
-        })
-        .catch(error => {
-          console.error("Error fetching rooms:", error);
-          toast.error("Error al buscar habitaciones disponibles");
-        })
-        .finally(() => {
-          setIsSearchingRooms(false);
-        });
-    } else {
-      setAvailableRooms([]);
-    }
-  }, [checkInValue, checkOutValue, adultsValue, childrenValue]);
 
   // Auto-ajustar número de habitaciones según huespedes (capacidad base 2)
   useEffect(() => {
@@ -299,8 +256,8 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid grid-cols-3 mb-4">
           <TabsTrigger value="details">Detalles</TabsTrigger>
-          <TabsTrigger value="room">Habitación</TabsTrigger>
-          <TabsTrigger value="payment">Pago</TabsTrigger>
+          <TabsTrigger value="room" disabled={!canSelectRooms}>Habitación</TabsTrigger>
+          <TabsTrigger value="payment" disabled={!canSelectRooms}>Pago</TabsTrigger>
         </TabsList>
 
         <Form {...form}>
@@ -694,24 +651,54 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
                 <Button
                   type="button"
                   onClick={async () => {
-                    // Validar detalles
                     if (activeTab === "details") {
                       const valid = await form.trigger([
-                        "guestName","guestEmail","guestPhone","checkIn","checkOut"
+                        "guestName","guestEmail","guestPhone","checkIn","checkOut","adults","children"
                       ]);
                       if (!valid) return;
-                    }
-                    // Validar habitaciones
-                    if (activeTab === "room") {
+                      // Buscar habitaciones disponibles solo si los detalles son válidos
+                      const checkIn = form.getValues("checkIn");
+                      const checkOut = form.getValues("checkOut");
+                      const adults = Number(form.getValues("adults"));
+                      const children = Number(form.getValues("children"));
+                      const totalGuests = adults + children;
+                      if (checkIn && checkOut && totalGuests > 0) {
+                        setIsSearchingRooms(true);
+                        const start = checkIn.toISOString().split("T")[0];
+                        const end = checkOut.toISOString().split("T")[0];
+                        const url = `/api/rooms/available?checkIn=${start}&checkOut=${end}&guests=${totalGuests}`;
+                        const res = await fetch(url, {
+                          headers: {
+                            "x-api-key": process.env.NEXT_PUBLIC_API_KEY || "key1"
+                          }
+                        }).then(r => r.json());
+                        if (res.success) {
+                          setAvailableRooms(res.data);
+                          setCanSelectRooms(true);
+                          if (!res.data.length) {
+                            toast.warning("No hay habitaciones disponibles para las fechas y huéspedes seleccionados");
+                            return;
+                          }
+                          setActiveTab("room");
+                        } else {
+                          setAvailableRooms([]);
+                          setCanSelectRooms(false);
+                          toast.error("Error al buscar habitaciones disponibles");
+                          return;
+                        }
+                        setIsSearchingRooms(false);
+                      }
+                    } else if (activeTab === "room") {
                       const triggers = fields.flatMap((_, i) => [
                         `rooms.${i}.roomType`,
                         `rooms.${i}.roomId`
                       ] as const);
                       const valid = await form.trigger(triggers);
                       if (!valid) return;
+                      setActiveTab("payment");
                     }
-                    setActiveTab(getNextTab());
                   }}
+                  disabled={isSearchingRooms}
                 >
                   Continuar
                 </Button>
