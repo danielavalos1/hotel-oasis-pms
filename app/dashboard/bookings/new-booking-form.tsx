@@ -72,6 +72,9 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
   const [openCheckIn, setOpenCheckIn] = useState(false);
   const [openCheckOut, setOpenCheckOut] = useState(false);
 
+  // Estado para habitaciones disponibles por tipo
+  const [roomOptionsByType, setRoomOptionsByType] = useState<Record<string, RoomOption[]>>({});
+
   // Hook personalizado para la búsqueda de huéspedes
   const { 
     selectedGuest, 
@@ -250,6 +253,37 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
     const room = availableRooms.find(r => r.id.toString() === id);
     return sum + (room ? room.pricePerNight * nights : 0);
   }, 0);
+
+  // Buscar habitaciones disponibles por tipo y fechas cuando se selecciona un tipo
+  const fetchRoomsByType = async (roomType: string) => {
+    const checkIn = form.getValues("checkIn");
+    const checkOut = form.getValues("checkOut");
+    if (!roomType || !checkIn || !checkOut) return;
+    const start = checkIn.toISOString().split("T")[0];
+    const end = checkOut.toISOString().split("T")[0];
+    const url = `/api/rooms/available?checkIn=${start}&checkOut=${end}&roomType=${roomType}`;
+    const res = await fetch(url, {
+      headers: {
+        "x-api-key": process.env.NEXT_PUBLIC_API_KEY || "key1"
+      }
+    }).then(r => r.json());
+    if (res.success) {
+      setRoomOptionsByType(prev => ({ ...prev, [roomType]: res.data }));
+    } else {
+      setRoomOptionsByType(prev => ({ ...prev, [roomType]: [] }));
+    }
+  };
+
+  // Efecto para buscar habitaciones cuando cambia el tipo en cada campo
+  useEffect(() => {
+    fields.forEach((field, index) => {
+      const selectedType = form.watch(`rooms.${index}.roomType`);
+      if (selectedType && !roomOptionsByType[selectedType]) {
+        fetchRoomsByType(selectedType);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fields.map((_, i) => form.watch(`rooms.${i}.roomType`)).join(","), form.getValues("checkIn"), form.getValues("checkOut")]);
 
   return (
     <div className="space-y-6">
@@ -520,12 +554,16 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
                             <FormItem>
                               <FormLabel>Habitación</FormLabel>
                               <FormControl>
-                                <Select onValueChange={field.onChange} value={field.value} disabled={!options.length}>
+                                <Select
+                                  onValueChange={field.onChange}
+                                  value={field.value}
+                                  disabled={!roomOptionsByType[selectedType] || !roomOptionsByType[selectedType].length}
+                                >
                                   <SelectTrigger>
-                                    <SelectValue placeholder={isSearchingRooms ? "Buscando..." : options.length ? "Seleccionar habitación" : "Sin opciones"} />
+                                    <SelectValue placeholder={isSearchingRooms ? "Buscando..." : roomOptionsByType[selectedType]?.length ? "Seleccionar habitación" : "Sin opciones"} />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    {options.map(r => (
+                                    {roomOptionsByType[selectedType]?.map(r => (
                                       <SelectItem key={r.id} value={r.id.toString()}>
                                         {r.roomNumber} - ${r.pricePerNight.toFixed(2)}
                                       </SelectItem>
