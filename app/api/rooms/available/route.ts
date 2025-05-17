@@ -61,7 +61,6 @@ export async function GET(request: NextRequest) {
       availableRooms = await roomService.getAvailableRoomsByType({
         checkIn: new Date(checkIn),
         checkOut: new Date(checkOut),
-        guests: guests ? parseInt(guests) : undefined,
         roomType: roomType || undefined,
       });
       console.log(
