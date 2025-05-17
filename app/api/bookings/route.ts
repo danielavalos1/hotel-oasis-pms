@@ -11,31 +11,57 @@ interface RoomTypeRequest {
   quantity: number;
 }
 
+function setCORSHeaders(origin?: string | null) {
+  return {
+    "Access-Control-Allow-Origin": origin || "*",
+    "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type,Authorization,x-api-key",
+    "Access-Control-Max-Age": "86400",
+  };
+}
+
+export async function OPTIONS(request: NextRequest) {
+  const origin = request.headers.get("origin");
+  return new NextResponse(null, {
+    status: 204,
+    headers: setCORSHeaders(origin),
+  });
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
+    const origin = request.headers.get("origin");
 
     if (startDate && endDate) {
       const bookings = await bookingService.getBookingsByDateRange(
         new Date(startDate),
         new Date(endDate)
       );
-      return NextResponse.json({ success: true, data: bookings });
+      return NextResponse.json(
+        { success: true, data: bookings },
+        { headers: setCORSHeaders(origin) }
+      );
     }
 
     const bookings = await bookingService.getAllBookings();
-    return NextResponse.json({ success: true, data: bookings });
+    return NextResponse.json(
+      { success: true, data: bookings },
+      { headers: setCORSHeaders(origin) }
+    );
   } catch {
+    const origin = request.headers.get("origin");
     return NextResponse.json(
       { success: false, error: "Failed to fetch bookings" },
-      { status: 500 }
+      { status: 500, headers: setCORSHeaders(origin) }
     );
   }
 }
 
 export async function POST(request: NextRequest) {
+  const origin = request.headers.get("origin");
   try {
     const body = await request.json();
     console.log("[API] Create Booking - Request body:", body);
@@ -48,7 +74,7 @@ export async function POST(request: NextRequest) {
           error: "Validation error",
           details: "Al menos una habitación debe ser especificada",
         },
-        { status: 400 }
+        { status: 400, headers: setCORSHeaders(origin) }
       );
     }
 
@@ -68,7 +94,7 @@ export async function POST(request: NextRequest) {
           details:
             "Todas las habitaciones deben tener un tipo y cantidad válidos",
         },
-        { status: 400 }
+        { status: 400, headers: setCORSHeaders(origin) }
       );
     }
 
@@ -106,7 +132,11 @@ export async function POST(request: NextRequest) {
           .slice(0, roomRequest.quantity)
           .map((room) => ({
             roomId: room.id,
-            priceAtTime: room.pricePerNight,
+            priceAtTime:
+              typeof room.pricePerNight === "object" &&
+              "toNumber" in room.pricePerNight
+                ? room.pricePerNight.toNumber()
+                : Number(room.pricePerNight),
           }));
       }
     );
@@ -138,7 +168,10 @@ export async function POST(request: NextRequest) {
       // Continuamos con la respuesta exitosa aunque falle el envío de correos
     }
 
-    return NextResponse.json({ success: true, data: booking }, { status: 201 });
+    return NextResponse.json(
+      { success: true, data: booking },
+      { status: 201, headers: setCORSHeaders(origin) }
+    );
   } catch (error) {
     if (error instanceof ZodError) {
       console.log("[API] Create Booking - Validation error:", error.errors);
@@ -151,7 +184,7 @@ export async function POST(request: NextRequest) {
             message: err.message,
           })),
         },
-        { status: 400 }
+        { status: 400, headers: setCORSHeaders(origin) }
       );
     }
 
@@ -168,7 +201,7 @@ export async function POST(request: NextRequest) {
               error: "Unique constraint violation",
               details: `Una o más habitaciones ya están reservadas para este rango de fechas`,
             },
-            { status: 409 }
+            { status: 409, headers: setCORSHeaders(origin) }
           );
         case "P2003":
           return NextResponse.json(
@@ -177,7 +210,7 @@ export async function POST(request: NextRequest) {
               error: "Foreign key constraint failed",
               details: "El huésped o alguna habitación especificada no existe",
             },
-            { status: 400 }
+            { status: 400, headers: setCORSHeaders(origin) }
           );
         default:
           break;
@@ -198,7 +231,7 @@ export async function POST(request: NextRequest) {
         error: "Booking creation failed",
         details: errorMessage,
       },
-      { status: 400 }
+      { status: 400, headers: setCORSHeaders(origin) }
     );
   }
 }
