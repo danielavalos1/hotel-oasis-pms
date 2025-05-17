@@ -471,23 +471,20 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Adultos</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {[1, 2, 3, 4].map((num) => (
-                            <SelectItem key={num} value={num.toString()}>
-                              {num}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={1}
+                          step={1}
+                          placeholder="Cantidad de adultos"
+                          {...field}
+                          value={field.value}
+                          onChange={e => {
+                            const val = e.target.value.replace(/[^0-9]/g, "");
+                            field.onChange(val === "" ? "" : String(Math.max(1, Number(val))));
+                          }}
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -499,23 +496,20 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Niños</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {[0, 1, 2, 3, 4].map((num) => (
-                            <SelectItem key={num} value={num.toString()}>
-                              {num}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={0}
+                          step={1}
+                          placeholder="Cantidad de niños"
+                          {...field}
+                          value={field.value}
+                          onChange={e => {
+                            const val = e.target.value.replace(/[^0-9]/g, "");
+                            field.onChange(val === "" ? "0" : String(Math.max(0, Number(val))));
+                          }}
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
