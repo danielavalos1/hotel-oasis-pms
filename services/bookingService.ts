@@ -193,4 +193,14 @@ export const bookingService = {
       throw new Error(`Error deleting booking: ${error}`);
     }
   },
+
+  async getBookingDetail(id: number) {
+    return await prisma.booking.findUnique({
+      where: { id },
+      include: {
+        guest: true,
+        bookingRooms: { include: { room: true } },
+      },
+    });
+  },
 };
