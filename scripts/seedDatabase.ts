@@ -3,7 +3,22 @@ import * as bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
+async function cleanDatabase() {
+  // Eliminar registros en orden para respetar las restricciones de claves foráneas
+  await prisma.roomInventory.deleteMany();
+  await prisma.room.deleteMany();
+  await prisma.amenity.deleteMany();
+  await prisma.user.deleteMany();
+
+  console.log("Todas las tablas han sido limpiadas");
+}
+
 async function main() {
+  console.log("Iniciando proceso de seeding...");
+
+  // Limpiar la base de datos primero
+  await cleanDatabase();
+
   // Crear usuarios
   const hashedPassword = await bcrypt.hash("123456", 10);
 
@@ -13,12 +28,6 @@ async function main() {
       name: "Administrator",
       email: "admin@test.com",
       role: UserRole.SUPERADMIN,
-    },
-    {
-      username: "admin2",
-      name: "Administrator 2",
-      email: "d@test.com",
-      role: UserRole.ADMIN,
     },
     {
       username: "receptionist1",
@@ -35,10 +44,8 @@ async function main() {
   ];
 
   for (const user of users) {
-    await prisma.user.upsert({
-      where: { username: user.username },
-      update: {},
-      create: {
+    await prisma.user.create({
+      data: {
         ...user,
         passwordHash: hashedPassword,
       },
@@ -70,55 +77,136 @@ async function main() {
     });
   }
 
-  // Configuración de tipos de habitaciones
-  const roomConfigs = [
+  const roomSpecifications = [
     {
+      numbers: [
+        "102",
+        "103",
+        "104",
+        "105",
+        "109",
+        "112",
+        "113",
+        "114",
+        "201",
+        "202",
+        "203",
+      ],
       type: RoomType.SENCILLA,
-      count: 11,
-      baseNumber: 101,
-      price: 750.0,
     },
+    { numbers: ["214"], type: RoomType.SENCILLA_ESPECIAL },
     {
-      type: RoomType.SENCILLA_ESPECIAL,
-      count: 1,
-      baseNumber: 201,
-      price: 900.0,
-    },
-    {
+      numbers: [
+        "107",
+        "108",
+        "110",
+        "111",
+        "204",
+        "207",
+        "208",
+        "209",
+        "210",
+        "211",
+        "212",
+      ],
       type: RoomType.DOBLE,
-      count: 11,
-      baseNumber: 301,
-      price: 1050.0,
     },
-    {
-      type: RoomType.DOBLE_ESPECIAL,
-      count: 2,
-      baseNumber: 401,
-      price: 1200.0,
-    },
-    {
-      type: RoomType.SUITE_A,
-      count: 1,
-      baseNumber: 501,
-      price: 1400.0,
-    },
-    {
-      type: RoomType.SUITE_B,
-      count: 1,
-      baseNumber: 601,
-      price: 1400.0,
-    },
+    { numbers: ["205", "206"], type: RoomType.DOBLE_ESPECIAL },
+    { numbers: ["213"], type: RoomType.SUITE_A },
+    { numbers: ["106"], type: RoomType.SUITE_B },
   ];
 
-  // Crear habitaciones
-  for (const config of roomConfigs) {
-    for (let i = 0; i < config.count; i++) {
-      const roomNumber = (config.baseNumber + i).toString();
+  const roomTypeDetails = {
+    [RoomType.SENCILLA]: {
+      price: 750.0,
+      capacity: 2,
+      description: "Habitación sencilla con una cama matrimonial",
+      amenities: [
+        "Televisión",
+        "Aire acondicionado",
+        "Baño privado",
+        "WiFi gratuito",
+      ],
+    },
+    [RoomType.SENCILLA_ESPECIAL]: {
+      price: 900.0,
+      capacity: 2,
+      description: "Habitación sencilla especial con vista privilegiada",
+      amenities: [
+        "Smart TV",
+        "Aire acondicionado",
+        "Baño privado",
+        "WiFi gratuito",
+        "Amenidades premium",
+      ],
+    },
+    [RoomType.DOBLE]: {
+      price: 1050.0,
+      capacity: 4,
+      description: "Habitación doble con dos camas matrimoniales",
+      amenities: [
+        "Televisión",
+        "Aire acondicionado",
+        "Baño familiar",
+        "WiFi gratuito",
+        "Dos camas",
+      ],
+    },
+    [RoomType.DOBLE_ESPECIAL]: {
+      price: 1200.0,
+      capacity: 4,
+      description: "Habitación doble especial con vista y amenidades premium",
+      amenities: [
+        "Smart TV",
+        "Aire acondicionado",
+        "Baño familiar",
+        "WiFi gratuito",
+        "Dos camas",
+        "Amenidades premium",
+      ],
+    },
+    [RoomType.SUITE_A]: {
+      price: 1400.0,
+      capacity: 4,
+      description: "Suite de lujo con jacuzzi y sala de estar",
+      amenities: [
+        "Aire acondicionado",
+        "Baño privado",
+        "WiFi gratuito",
+        "Amenidades premium",
+        "Jacuzzi privado",
+        "Sala de estar",
+      ],
+    },
+    [RoomType.SUITE_B]: {
+      price: 1400.0,
+      capacity: 4,
+      description: "Suite familiar con sala de estar y comedor",
+      amenities: [
+        'TV 65"',
+        "Aire acondicionado",
+        "Baño familiar",
+        "WiFi gratuito",
+        "Amenidades premium",
+        "Sala de estar",
+        "Comedor",
+        "Dos camas",
+      ],
+    },
+  };
+
+  // Crear habitaciones con los nuevos campos
+  for (const spec of roomSpecifications) {
+    for (const roomNumber of spec.numbers) {
+      const details = roomTypeDetails[spec.type];
       await prisma.room.create({
         data: {
           roomNumber,
-          type: config.type,
-          pricePerNight: config.price,
+          type: spec.type,
+          capacity: details.capacity,
+          description: details.description,
+          amenities: details.amenities,
+          pricePerNight: details.price,
           isAvailable: true,
           roomInventory: {
             create: {
@@ -136,13 +224,7 @@ async function main() {
     "Users created:",
     users.map((u) => `${u.name} (${u.role})`).join(", ")
   );
-  console.log(`Created rooms:
-    - ${roomConfigs[0].count} Sencillas
-    - ${roomConfigs[1].count} Sencilla Especial
-    - ${roomConfigs[2].count} Dobles
-    - ${roomConfigs[3].count} Dobles Especiales
-    - ${roomConfigs[4].count} Suite A
-    - ${roomConfigs[5].count} Suite B`);
+  console.log("Rooms created according to the specified configuration");
 }
 
 main()
