@@ -6,10 +6,20 @@ import { Overview } from "@/components/dashboard/overview";
 import { RecentBookings } from "@/components/dashboard/recent-bookings";
 import { RoomStatus } from "@/components/dashboard/room-status";
 import { BookingCalendar } from "@/components/dashboard/booking-calendar";
+import { RoomGrid } from "@/app/dashboard/rooms/room-grid";
 
 export default function Dashboard() {
   return (
     <div>
+      <Card className="mb-8 transition-all hover:shadow-md">
+        <CardHeader>
+          <CardTitle>Habitaciones</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <RoomGrid />
+        </CardContent>
+      </Card>
+
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
         <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
         <div className="inline-flex items-center rounded-lg bg-muted px-3 py-1 text-sm font-medium">
