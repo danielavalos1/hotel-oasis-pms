@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { Room, Prisma, RoomType } from "@prisma/client";
+import { Room, Prisma, RoomType, RoomStatus } from "@prisma/client";
 import { AvailableRoomsByType, RoomAvailabilityParams } from "@/types/room";
 
 export const roomService = {
@@ -166,9 +166,11 @@ export const roomService = {
 
         return {
           ...roomExample,
-          pricePerNight: typeof roomExample.pricePerNight === "object" && "toNumber" in roomExample.pricePerNight
-            ? roomExample.pricePerNight.toNumber()
-            : Number(roomExample.pricePerNight),
+          pricePerNight:
+            typeof roomExample.pricePerNight === "object" &&
+            "toNumber" in roomExample.pricePerNight
+              ? roomExample.pricePerNight.toNumber()
+              : Number(roomExample.pricePerNight),
           availableCount: group._count.id,
         } as AvailableRoomsByType;
       })
@@ -246,12 +248,13 @@ export const roomService = {
   },
 
   async updateRoom(id: number, data: Partial<Room>): Promise<Room> {
+    const updateData: Partial<Room> = {};
+    if (typeof data.status === "string")
+      updateData.status = data.status as RoomStatus;
+    if (typeof data.floor === "number") updateData.floor = data.floor;
     return await prisma.room.update({
       where: { id },
-      data,
-      include: {
-        roomInventory: true,
-      },
+      data: updateData,
     });
   },
 

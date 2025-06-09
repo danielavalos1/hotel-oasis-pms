@@ -31,6 +31,8 @@ model Room {
   bookingRooms  BookingRoom[] // Cambiado de bookings a bookingRooms
   roomInventory RoomInventory?
   channelRates  ChannelRate[]
+  status        RoomStatus     @default(LIBRE)
+  floor         Int            @default(1) // Nuevo campo para piso
 }
 
 enum RoomType {
@@ -40,6 +42,17 @@ enum RoomType {
   DOBLE_ESPECIAL
   SUITE_A
   SUITE_B
+}
+
+enum RoomStatus {
+  LIBRE
+  RESERVADA
+  SUCIA
+  BLOQUEADA
+  OCUPADA
+  EN_MANTENIMIENTO
+  LIMPIEZA
+  // Puedes agregar más combinaciones según necesidades operativas
 }
 
 model Booking {
