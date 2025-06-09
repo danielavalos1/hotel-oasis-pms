@@ -89,29 +89,29 @@ export default function RoomsPage() {
         <CardHeader className="px-4 sm:px-6 py-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4">
             <CardTitle className="text-lg">Habitaciones del Hotel</CardTitle>
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full sm:w-auto">
-              <TabsList className="grid grid-cols-2 w-full sm:w-[180px]">
-                <TabsTrigger value="list">Lista</TabsTrigger>
-                <TabsTrigger value="grid">Cuadrícula</TabsTrigger>
-              </TabsList>
-            </Tabs>
           </div>
         </CardHeader>
         <CardContent className="p-0 overflow-x-auto">
-          <TabsContent value="list" className="mt-0 p-0">
-            <RoomsList 
-              searchQuery={searchQuery}
-              floorFilter={floorFilter}
-              typeFilter={typeFilter}
-            />
-          </TabsContent>
-          <TabsContent value="grid" className="mt-0">
-            <RoomGrid 
-              searchQuery={searchQuery}
-              floorFilter={floorFilter}
-              typeFilter={typeFilter}
-            />
-          </TabsContent>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full sm:w-auto">
+            <TabsList className="grid grid-cols-2 w-full sm:w-[180px]">
+              <TabsTrigger value="list">Lista</TabsTrigger>
+              <TabsTrigger value="grid">Cuadrícula</TabsTrigger>
+            </TabsList>
+            <TabsContent value="list" className="mt-0 p-0">
+              <RoomsList 
+                searchQuery={searchQuery}
+                floorFilter={floorFilter}
+                typeFilter={typeFilter}
+              />
+            </TabsContent>
+            <TabsContent value="grid" className="mt-0">
+              <RoomGrid 
+                searchQuery={searchQuery}
+                floorFilter={floorFilter}
+                typeFilter={typeFilter}
+              />
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
     </div>
