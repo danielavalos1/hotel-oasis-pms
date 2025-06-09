@@ -205,6 +205,7 @@ async function main() {
           type: spec.type,
           capacity: details.capacity,
           description: details.description,
+          floor: roomNumber.startsWith("2") ? 2 : 1,
           amenities: details.amenities,
           pricePerNight: details.price,
           isAvailable: true,

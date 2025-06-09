@@ -234,8 +234,18 @@ export function RoomGrid({
     filteredData = filteredData.filter((room) => room.type === typeFilter);
   }
 
+  // Ordenar habitaciones por piso y número antes de agrupar
+  const sortedRooms = [...displayRooms].sort((a, b) => {
+    if (a.floor !== b.floor) return a.floor - b.floor;
+    // Comparar roomNumber como string numérico si es posible
+    const numA = parseInt(a.roomNumber, 10);
+    const numB = parseInt(b.roomNumber, 10);
+    if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+    return a.roomNumber.localeCompare(b.roomNumber);
+  });
+
   // Agrupar por piso
-  const groupedRooms = filteredData.reduce<Record<string, Room[]>>(
+  const groupedRooms = sortedRooms.reduce<Record<string, Room[]>>(
     (acc, room) => {
       const floor = String(room.floor);
       if (!acc[floor]) acc[floor] = [];

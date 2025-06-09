@@ -281,7 +281,7 @@ export default function DashboardLayout({
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto min-w-0">
-          <div className="w-full max-w-screen-xl mx-auto py-4 px-2 sm:px-4 md:px-6 min-w-0">
+          <div className="w-full max-w-screen-2xl mx-auto py-4 px-2 sm:px-4 md:px-6 min-w-0">
             {children}
           </div>
         </main>
