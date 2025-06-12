@@ -8,9 +8,21 @@ import { Plus, Search } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RoomsList } from "./rooms-list";
 import { RoomGrid } from "./room-grid";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { NewRoomForm } from "./new-room-form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function RoomsPage() {
   const [activeTab, setActiveTab] = useState("list");
@@ -20,7 +32,7 @@ export default function RoomsPage() {
   const [typeFilter, setTypeFilter] = useState("all");
 
   return (
-    <div className="w-full max-w-screen-xl mx-auto px-2 sm:px-4 md:px-6 py-4">
+    <div className="w-full max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 py-4">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
         <h2 className="text-3xl font-bold tracking-tight">Habitaciones</h2>
         <Dialog open={isNewRoomOpen} onOpenChange={setIsNewRoomOpen}>
@@ -75,11 +87,16 @@ export default function RoomsPage() {
               <SelectItem value="presidential">Presidencial</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="ghost" size="sm" className="shrink-0" onClick={() => {
-            setFloorFilter("all");
-            setTypeFilter("all");
-            setSearchQuery("");
-          }}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="shrink-0"
+            onClick={() => {
+              setFloorFilter("all");
+              setTypeFilter("all");
+              setSearchQuery("");
+            }}
+          >
             Limpiar filtros
           </Button>
         </div>
@@ -92,20 +109,24 @@ export default function RoomsPage() {
           </div>
         </CardHeader>
         <CardContent className="p-0 overflow-x-auto">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full sm:w-auto">
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="w-full sm:w-auto"
+          >
             <TabsList className="grid grid-cols-2 w-full sm:w-[180px]">
               <TabsTrigger value="list">Lista</TabsTrigger>
               <TabsTrigger value="grid">Cuadrícula</TabsTrigger>
             </TabsList>
             <TabsContent value="list" className="mt-0 p-0">
-              <RoomsList 
+              <RoomsList
                 searchQuery={searchQuery}
                 floorFilter={floorFilter}
                 typeFilter={typeFilter}
               />
             </TabsContent>
             <TabsContent value="grid" className="mt-0">
-              <RoomGrid 
+              <RoomGrid
                 searchQuery={searchQuery}
                 floorFilter={floorFilter}
                 typeFilter={typeFilter}

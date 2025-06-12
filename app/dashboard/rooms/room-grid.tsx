@@ -3,7 +3,15 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Edit, MoreHorizontal, Trash } from "lucide-react";
+import {
+  Edit,
+  MoreHorizontal,
+  Trash,
+  DoorOpen,
+  DoorClosed,
+  Lock,
+} from "lucide-react";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -196,6 +204,70 @@ function EditRoomDialog({
   );
 }
 
+// Helper para determinar la secuencia de puertas
+function getDoorSequence(
+  status: RoomStatus,
+  nextStatus: RoomStatus | null
+): React.JSX.Element {
+  // Si la habitación está en mantenimiento, bloqueada o limpieza, mostrar puerta cerrada con candado
+  if (["EN_MANTENIMIENTO", "BLOQUEADA", "LIMPIEZA"].includes(status)) {
+    return (
+      <span className="flex items-center gap-1 text-red-700">
+        <DoorClosed className="w-5 h-5" />
+        <Lock className="w-4 h-4 -ml-2" />
+      </span>
+    );
+  }
+  // Ejemplo de lógica simple:
+  // - Si pasa de OCUPADA a LIBRE: cerrada -> abierta
+  // - Si pasa de RESERVADA a OCUPADA: abierta -> cerrada
+  // - Si sigue OCUPADA: cerrada -> cerrada
+  // - Si sigue LIBRE: abierta -> abierta
+  // Puedes expandir la lógica según tus reglas de negocio
+  if (status === "OCUPADA" && nextStatus === "LIBRE") {
+    return (
+      <span className="flex items-center gap-1 text-orange-700">
+        <DoorClosed className="w-5 h-5" />
+        <span className="mx-1">→</span>
+        <DoorOpen className="w-5 h-5" />
+      </span>
+    );
+  }
+  if (status === "RESERVADA" && nextStatus === "OCUPADA") {
+    return (
+      <span className="flex items-center gap-1 text-purple-700">
+        <DoorOpen className="w-5 h-5" />
+        <span className="mx-1">→</span>
+        <DoorClosed className="w-5 h-5" />
+      </span>
+    );
+  }
+  if (status === "OCUPADA" && nextStatus === "OCUPADA") {
+    return (
+      <span className="flex items-center gap-1 text-blue-700">
+        <DoorClosed className="w-5 h-5" />
+        <span className="mx-1">→</span>
+        <DoorClosed className="w-5 h-5" />
+      </span>
+    );
+  }
+  if (status === "LIBRE" && nextStatus === "LIBRE") {
+    return (
+      <span className="flex items-center gap-1 text-green-700">
+        <DoorOpen className="w-5 h-5" />
+        <span className="mx-1">→</span>
+        <DoorOpen className="w-5 h-5" />
+      </span>
+    );
+  }
+  // Default: solo mostrar el estado actual
+  return status === "OCUPADA" ? (
+    <DoorClosed className="w-5 h-5 text-blue-700" />
+  ) : (
+    <DoorOpen className="w-5 h-5 text-green-700" />
+  );
+}
+
 export function RoomGrid({
   searchQuery = "",
   floorFilter = "all",
@@ -312,7 +384,13 @@ export function RoomGrid({
                       room.status === "SUCIA" ? "text-orange-50" : ""
                     }`}
                   >
-                    {room.roomNumber}
+                    <div className="flex items-center justify-start gap-2">
+                      {room.roomNumber}
+                      {getDoorSequence(
+                        room.status,
+                        room.status === "OCUPADA" ? "LIBRE" : room.status
+                      )}
+                    </div>
                   </CardTitle>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
