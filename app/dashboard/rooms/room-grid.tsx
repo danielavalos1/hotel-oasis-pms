@@ -281,6 +281,12 @@ export function RoomGrid({
   );
   const rooms = data?.data || [];
 
+  // Log de la data recibida del backend
+  if (typeof window !== "undefined") {
+    // eslint-disable-next-line no-console
+    console.log("[RoomGrid] Data recibida de /api/rooms/status:", rooms);
+  }
+
   // Filtros locales
   //const [open, setOpen] = useState(false);
   const [localRooms, setLocalRooms] = useState<Room[]>([]);
@@ -329,6 +335,12 @@ export function RoomGrid({
   const sortedFloors = Object.keys(groupedRooms).sort(
     (a, b) => parseInt(a) - parseInt(b)
   );
+
+  // Log de la data filtrada y ordenada que se muestra
+  if (typeof window !== "undefined") {
+    // eslint-disable-next-line no-console
+    console.log("[RoomGrid] Data mostrada en grid:", filteredData);
+  }
 
   if (isLoading) {
     return (

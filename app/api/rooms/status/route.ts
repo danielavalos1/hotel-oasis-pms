@@ -51,10 +51,14 @@ export async function GET(request: NextRequest) {
     const dateParam = searchParams.get("date");
     const date = dateParam ? new Date(dateParam) : new Date();
 
+    console.log("[API][rooms/status] Fecha consultada:", date.toISOString());
+
     // Obtener todas las habitaciones
     const rooms = await roomService.getAllRooms();
+    console.log("[API][rooms/status] Habitaciones:", rooms.map(r => ({ id: r.id, num: r.roomNumber, status: r.status, floor: r.floor })));
     // Obtener todas las reservas activas para esa fecha
-    const bookings = await bookingService.getBookingsByDateRange(date, date);
+    const bookings = await bookingService.getBookingsByDate(date);
+    console.log("[API][rooms/status] Bookings activos:", bookings.map(b => ({ id: b.id, checkIn: b.checkInDate, checkOut: b.checkOutDate, rooms: b.bookingRooms.map(br => br.roomId) })));
 
     // Mapear status por habitación
     const result = rooms.map((room) => {
@@ -75,8 +79,11 @@ export async function GET(request: NextRequest) {
       };
     });
 
+    console.log("[API][rooms/status] Resultado final:", result);
+
     return NextResponse.json({ success: true, data: result });
   } catch (error) {
+    console.error("[API][rooms/status] Error:", error);
     return NextResponse.json(
       { success: false, error: (error as Error).message },
       { status: 500 }

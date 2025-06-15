@@ -163,6 +163,23 @@ export const bookingService = {
     }
   },
 
+  async getBookingsByDate(date: Date) {
+    try {
+      return await prisma.booking.findMany({
+        where: {
+          checkInDate: { lte: date },
+          checkOutDate: { gt: date },
+        },
+        include: {
+          guest: true,
+          bookingRooms: { include: { room: true } },
+        },
+      });
+    } catch (error) {
+      throw new Error(`Error fetching bookings by date: ${error}`);
+    }
+  },
+
   // Update
   async updateBooking(id: number, data: Partial<Booking>) {
     try {
