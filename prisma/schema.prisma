@@ -20,19 +20,20 @@ model Guest {
 }
 
 model Room {
-  id            Int            @id @default(autoincrement())
-  roomNumber    String         @unique
-  type          RoomType       @default(SENCILLA)
-  capacity      Int            @default(2)
-  pricePerNight Decimal        @db.Decimal(10, 2)
-  description   String?
-  amenities     String[]       @default([])
-  isAvailable   Boolean        @default(true)
-  bookingRooms  BookingRoom[] // Cambiado de bookings a bookingRooms
-  roomInventory RoomInventory?
-  channelRates  ChannelRate[]
-  status        RoomStatus     @default(LIBRE)
-  floor         Int            @default(1) // Nuevo campo para piso
+  id              Int               @id @default(autoincrement())
+  roomNumber      String            @unique
+  type            RoomType          @default(SENCILLA)
+  capacity        Int               @default(2)
+  pricePerNight   Decimal           @db.Decimal(10, 2)
+  description     String?
+  amenities       String[]          @default([])
+  isAvailable     Boolean           @default(true)
+  bookingRooms    BookingRoom[] // Cambiado de bookings a bookingRooms
+  roomInventory   RoomInventory?
+  channelRates    ChannelRate[]
+  status          RoomStatus        @default(LIBRE)
+  floor           Int               @default(1) // Nuevo campo para piso
+  BookingMovement BookingMovement[]
 }
 
 enum RoomType {
@@ -52,21 +53,22 @@ enum RoomStatus {
   OCUPADA
   EN_MANTENIMIENTO
   LIMPIEZA
-  // Puedes agregar más combinaciones según necesidades operativas
 }
 
 model Booking {
-  id             Int                   @id @default(autoincrement())
-  guestId        Int
-  checkInDate    DateTime              @db.Date
-  checkOutDate   DateTime              @db.Date
-  totalPrice     Decimal               @db.Decimal(10, 2)
-  status         String
-  guest          Guest                 @relation(fields: [guestId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  numberOfGuests Int                   @default(1)
-  bookingRooms   BookingRoom[]
-  payments       Payment[]
-  modifications  BookingModification[]
+  id              Int                   @id @default(autoincrement())
+  guestId         Int
+  checkInDate     DateTime              @db.Date
+  checkOutDate    DateTime              @db.Date
+  totalPrice      Decimal               @db.Decimal(10, 2)
+  status          String
+  guest           Guest                 @relation(fields: [guestId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  numberOfGuests  Int                   @default(1)
+  bookingRooms    BookingRoom[]
+  payments        Payment[]
+  modifications   BookingModification[]
+  BookingMovement BookingMovement[]
+  BookingEvent    BookingEvent[]
 }
 
 model Payment {
@@ -86,21 +88,23 @@ enum UserRole {
 }
 
 model User {
-  id           Int                @id @default(autoincrement())
-  username     String             @unique
-  name         String
-  lastName     String?
-  passwordHash String
-  email        String             @unique
-  role         UserRole           @default(RECEPTIONIST)
-  departmentId Int?
-  position     String?
-  hireDate     DateTime?          @db.Date
-  status       EmployeeStatus     @default(ACTIVE)
-  department   Department?        @relation(fields: [departmentId], references: [id])
-  attendance   Attendance[]
-  schedules    Schedule[]
-  documents    EmployeeDocument[]
+  id              Int                @id @default(autoincrement())
+  username        String             @unique
+  name            String
+  lastName        String?
+  passwordHash    String
+  email           String             @unique
+  role            UserRole           @default(RECEPTIONIST)
+  departmentId    Int?
+  position        String?
+  hireDate        DateTime?          @db.Date
+  status          EmployeeStatus     @default(ACTIVE)
+  department      Department?        @relation(fields: [departmentId], references: [id])
+  attendance      Attendance[]
+  schedules       Schedule[]
+  documents       EmployeeDocument[]
+  BookingMovement BookingMovement[]
+  BookingEvent    BookingEvent[]
 }
 
 enum EmployeeStatus {
@@ -214,4 +218,65 @@ model BookingRoom {
   room        Room    @relation(fields: [roomId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   @@unique([bookingId, roomId]) // Asegura que no haya duplicados
+}
+
+// --- Movimientos y eventos de reservas ---
+model BookingMovement {
+  id        Int          @id @default(autoincrement())
+  bookingId Int
+  roomId    Int? // Para asociar el movimiento a una habitación específica si aplica
+  type      MovementType
+  amount    Decimal?     @db.Decimal(10, 2)
+  subtotal  Decimal?     @db.Decimal(10, 2) // Para reportes
+  iva       Decimal?     @db.Decimal(10, 2) // IVA calculado
+  tax3      Decimal?     @db.Decimal(10, 2) // Impuesto 3%
+  total     Decimal?     @db.Decimal(10, 2) // Total con impuestos
+  reference String? // Referencia o folio
+  concept   String? // Descripción del concepto
+  createdAt DateTime     @default(now())
+  turnoId   Int? // Turno en el que se registró
+  userId    Int? // Usuario que registró el movimiento
+  booking   Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  room      Room?        @relation(fields: [roomId], references: [id])
+  turno     Turno?       @relation(fields: [turnoId], references: [id])
+  user      User?        @relation(fields: [userId], references: [id])
+}
+
+enum MovementType {
+  PAYMENT
+  EXTENSION
+  CANCELLATION
+  EXTRA_CHARGE
+  REFUND
+  OTHER
+}
+
+model BookingEvent {
+  id        Int              @id @default(autoincrement())
+  bookingId Int
+  eventType BookingEventType
+  eventDate DateTime         @default(now())
+  userId    Int?
+  notes     String?
+  booking   Booking          @relation(fields: [bookingId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user      User?            @relation(fields: [userId], references: [id])
+}
+
+enum BookingEventType {
+  CHECKIN
+  CHECKOUT
+  EXTENSION
+  NO_SHOW
+  EARLY_CHECKOUT
+  OTHER
+}
+
+// --- Turnos para reporte de conceptos ---
+model Turno {
+  id          Int               @id @default(autoincrement())
+  numero      Int // 1, 2, 3
+  nombre      String // Ej: "Turno Matutino"
+  inicio      DateTime // Hora de inicio del turno
+  fin         DateTime // Hora de fin del turno
+  movimientos BookingMovement[]
 }
