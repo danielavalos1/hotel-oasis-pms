@@ -3,7 +3,7 @@ import {
   createBookingSchema,
   type CreateBookingInput,
 } from "@/lib/validations/booking";
-import { Booking } from "@prisma/client";
+import { Booking, BookingEventType } from "@prisma/client";
 
 export const bookingService = {
   async createBooking(input: CreateBookingInput) {
@@ -217,6 +217,38 @@ export const bookingService = {
       include: {
         guest: true,
         bookingRooms: { include: { room: true } },
+      },
+    });
+  },
+
+  async registerBookingEvent({
+    bookingId,
+    eventType,
+    userId,
+    notes,
+    newRoomId,
+  }: {
+    bookingId: number;
+    eventType: BookingEventType;
+    userId?: number;
+    notes?: string;
+    newRoomId?: number;
+  }) {
+    // Si es movimiento de habitación, actualizar BookingRoom
+    if (eventType === "OTHER" && newRoomId) {
+      // Mover la reserva a otra habitación (solo el primer BookingRoom por simplicidad)
+      await prisma.bookingRoom.updateMany({
+        where: { bookingId },
+        data: { roomId: newRoomId },
+      });
+    }
+    // Registrar el evento
+    return await prisma.bookingEvent.create({
+      data: {
+        bookingId,
+        eventType,
+        userId,
+        notes,
       },
     });
   },

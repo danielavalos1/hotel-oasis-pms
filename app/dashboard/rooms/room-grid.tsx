@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/select";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { BookingEventModal } from "@/components/dashboard/booking-event-modal";
 
 const statusVariants: Record<RoomStatus, string> = {
   LIBRE: "bg-green-100 text-green-800 hover:bg-green-100/80",
@@ -436,6 +437,44 @@ export function RoomGrid({
                           });
                         }}
                       />
+
+                      <DropdownMenuItem>
+                        <BookingEventModal
+                          bookingId={1} // Mock bookingId - en producción obtenlo de las reservas activas
+                          userId={1}
+                          rooms={[room]}
+                          eventType="CHECKIN"
+                          onEvent={() => {
+                            // Refrescar datos tras registrar evento
+                          }}
+                        />
+                      </DropdownMenuItem>
+
+                      <DropdownMenuItem>
+                        <BookingEventModal
+                          bookingId={1}
+                          userId={1}
+                          rooms={[room]}
+                          eventType="CHECKOUT"
+                          onEvent={() => {
+                            // Refrescar datos tras registrar evento
+                          }}
+                        />
+                      </DropdownMenuItem>
+
+                      <DropdownMenuItem>
+                        <BookingEventModal
+                          bookingId={1}
+                          userId={1}
+                          rooms={rooms} // Todas las habitaciones para cambio
+                          eventType="OTHER"
+                          onEvent={() => {
+                            // Refrescar datos tras registrar evento
+                          }}
+                        />
+                      </DropdownMenuItem>
+
+                      <DropdownMenuSeparator />
                       <DropdownMenuItem>Ver reservas</DropdownMenuItem>
                       <DropdownMenuItem>Cambiar estado</DropdownMenuItem>
                       <DropdownMenuSeparator />
