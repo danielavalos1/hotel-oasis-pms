@@ -43,11 +43,14 @@ Estimación de complejidad y prioridad.
 
 Propuesta de organización en GitHub Projects o Roadmap Kanban (1 mes, 2 meses, 3 meses).
 
-Para la creación y gestión de tareas, **usa el Model Context Protocol (MCP) de GitHub** para crear issues y tickets directamente en el repositorio y proyecto indicados:
+Para la creación y gestión de tareas, **usa el Model Context Protocol (MCP) de GitHub** para crear issues y tickets directamente en los repositorios y proyecto Kanban indicados:
 
-- Repositorio GitHub: https://github.com/danielavalos1/hotel-oasis-pms
+- Repositorio Backend: https://github.com/danielavalos1/hotel-oasis-pms
+- Repositorio Frontend: https://github.com/danielavalos1/hotel-oasis-clientes
 - Proyecto Kanban: https://github.com/users/danielavalos1/projects/3
 
-Agrupa las tareas en base a un roadmap de desarrollo de máximo 3 meses.
+Además, deberás leer y analizar ambos proyectos (backend y frontend) para generar las tareas, dependencias y roadmap de desarrollo integral. El frontend (Astro) es una landing page para clientes, permite ver información del hotel, consultar disponibilidad y realizar reservaciones consumiendo la API del backend. El backend gestiona reservas, habitaciones, usuarios, reportes, blogs y APIs para el frontend.
 
-Cuando estés listo, te proporcionaré la descripción actual del proyecto o acceso al repositorio de código. ¿Estás listo para comenzar?
+Las tareas deben indicar si corresponden a backend, frontend o integración, y contemplar la comunicación entre ambos sistemas.
+
+Agrupa las tareas en base a un roadmap de desarrollo de máximo 3 meses, priorizando la entrega de un MVP funcional y la integración API.
