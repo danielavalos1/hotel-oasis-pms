@@ -23,6 +23,9 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     });
     return NextResponse.json({ success: true, data: event });
   } catch (error) {
+    // Log detallado para depuración en tests
+    // eslint-disable-next-line no-console
+    console.error("[API][bookings/[id]/event] Error:", error);
     return NextResponse.json({ success: false, error: (error as Error).message }, { status: 500 });
   }
 }

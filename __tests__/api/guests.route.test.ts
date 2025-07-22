@@ -31,7 +31,7 @@ describe("Guests API (App Router handler)", () => {
    * Verifica que el endpoint responde con un array de guests
    */
   it("GET /api/guests responde con lista de guests", async () => {
-    // Inserta un guest de prueba
+    // Inserta un guest de prueba antes del test
     await prisma.guest.create({
       data: {
         firstName: "Test",
@@ -42,8 +42,8 @@ describe("Guests API (App Router handler)", () => {
     });
     const req = createMockRequest("http://localhost:3000/api/guests");
     const res = await GET(req);
-    expect(res.status).toBe(200);
     const json = await res.json();
+    expect(res.status).toBe(200);
     expect(json.success).toBe(true);
     expect(Array.isArray(json.data)).toBe(true);
     expect(json.data.length).toBeGreaterThan(0);
