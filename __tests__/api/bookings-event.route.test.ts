@@ -59,6 +59,9 @@ describe("Booking Event API (App Router handler)", () => {
     });
     bookingId = booking.id;
     console.log("[TEST][beforeAll] bookingId:", bookingId, "userId:", userId);
+    // Verifica que el booking existe antes de crear bookingRoom
+    const exists = await prisma.booking.findUnique({ where: { id: booking.id } });
+    console.log("¿Booking existe antes de crear bookingRoom?", !!exists, booking.id);
     // Crea el bookingRoom
     await prisma.bookingRoom.create({
       data: {

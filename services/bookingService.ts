@@ -9,6 +9,16 @@ export const bookingService = {
   async createBooking(input: CreateBookingInput) {
     const validatedData = createBookingSchema.parse(input);
 
+    // Validación defensiva de fechas
+    if (
+      !(validatedData.checkInDate instanceof Date) ||
+      isNaN(validatedData.checkInDate.getTime()) ||
+      !(validatedData.checkOutDate instanceof Date) ||
+      isNaN(validatedData.checkOutDate.getTime())
+    ) {
+      throw new Error("Las fechas de check-in y check-out no son válidas.");
+    }
+
     return await prisma.$transaction(async (tx) => {
       let guestId: number;
 
@@ -195,8 +205,9 @@ export const bookingService = {
           },
         },
       });
-    } catch (error) {
-      throw new Error(`Error updating booking: ${error}`);
+    } catch (error: any) {
+      // Propaga el error original para que el handler pueda distinguir P2025
+      throw error;
     }
   },
 
