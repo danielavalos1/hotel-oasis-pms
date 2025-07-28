@@ -17,8 +17,22 @@ export const createBookingSchema = z.object({
   rooms: z
     .array(bookingRoomSchema)
     .min(1, "At least one room must be selected"),
-  checkInDate: z.string().transform((date) => new Date(date + "T00:00:00Z")),
-  checkOutDate: z.string().transform((date) => new Date(date + "T00:00:00Z")),
+  checkInDate: z.string().transform((date) => {
+    // Manejar tanto formato de fecha simple (YYYY-MM-DD) como ISO completo
+    const parsedDate = date.includes('T') ? new Date(date) : new Date(date + "T00:00:00Z");
+    if (isNaN(parsedDate.getTime())) {
+      throw new Error("Fecha de check-in inválida");
+    }
+    return parsedDate;
+  }),
+  checkOutDate: z.string().transform((date) => {
+    // Manejar tanto formato de fecha simple (YYYY-MM-DD) como ISO completo
+    const parsedDate = date.includes('T') ? new Date(date) : new Date(date + "T00:00:00Z");
+    if (isNaN(parsedDate.getTime())) {
+      throw new Error("Fecha de check-out inválida");
+    }
+    return parsedDate;
+  }),
   totalPrice: z
     .union([z.number(), z.string()])
     .transform((val) => (typeof val === "string" ? Number(val) : val))

@@ -9,13 +9,14 @@ export const bookingService = {
   async createBooking(input: CreateBookingInput) {
     const validatedData = createBookingSchema.parse(input);
 
-    // Validación defensiva de fechas
+    // Validación defensiva de fechas (después de la transformación de Zod ya son Date)
     if (
       !(validatedData.checkInDate instanceof Date) ||
       isNaN(validatedData.checkInDate.getTime()) ||
       !(validatedData.checkOutDate instanceof Date) ||
       isNaN(validatedData.checkOutDate.getTime())
     ) {
+      console.error("Fechas inválidas - checkInDate:", validatedData.checkInDate, "checkOutDate:", validatedData.checkOutDate);
       throw new Error("Las fechas de check-in y check-out no son válidas.");
     }
 

@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     }
     // Aplanar
     const roomsPayload = assignedRooms.flat();
-    // Construir payload final, asegurando que las fechas sean objetos Date
+    // Construir payload final, asegurando que las fechas sean strings ISO
     const payload = {
       ...body,
       checkInDate: checkIn.toISOString(),
