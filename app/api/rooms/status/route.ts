@@ -49,7 +49,13 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const dateParam = searchParams.get("date");
-    const date = dateParam ? new Date(dateParam) : new Date();
+    let date = dateParam ? new Date(dateParam) : new Date();
+
+    // Validar si la fecha es válida, si no usar fecha actual como fallback
+    if (isNaN(date.getTime())) {
+      console.log("[API][rooms/status] Fecha inválida recibida:", dateParam, "- usando fecha actual");
+      date = new Date();
+    }
 
     console.log("[API][rooms/status] Fecha consultada:", date.toISOString());
 

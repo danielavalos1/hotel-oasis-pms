@@ -249,13 +249,32 @@ export const roomService = {
 
   async updateRoom(id: number, data: Partial<Room>): Promise<Room> {
     const updateData: Partial<Room> = {};
-    if (typeof data.status === "string")
-      updateData.status = data.status as RoomStatus;
+    
+    // Campos básicos
+    if (typeof data.roomNumber === "string") updateData.roomNumber = data.roomNumber;
+    if (typeof data.type === "string") updateData.type = data.type as RoomType;
+    if (typeof data.capacity === "number") updateData.capacity = data.capacity;
+    if (data.pricePerNight !== undefined) updateData.pricePerNight = data.pricePerNight;
+    if (typeof data.description === "string") updateData.description = data.description;
+    if (typeof data.isAvailable === "boolean") updateData.isAvailable = data.isAvailable;
+    if (typeof data.status === "string") updateData.status = data.status as RoomStatus;
     if (typeof data.floor === "number") updateData.floor = data.floor;
-    return await prisma.room.update({
+    
+    // Amenidades (array de strings)
+    if (Array.isArray(data.amenities)) updateData.amenities = data.amenities;
+    
+    const updatedRoom = await prisma.room.update({
       where: { id },
       data: updateData,
     });
+    
+    // Convertir pricePerNight de Decimal a number para la respuesta
+    return {
+      ...updatedRoom,
+      pricePerNight: typeof updatedRoom.pricePerNight === 'object' && updatedRoom.pricePerNight !== null && 'toNumber' in updatedRoom.pricePerNight
+        ? (updatedRoom.pricePerNight as any).toNumber()
+        : Number(updatedRoom.pricePerNight)
+    };
   },
 
   async deleteRoom(id: number): Promise<Room> {
