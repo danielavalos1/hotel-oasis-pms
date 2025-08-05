@@ -154,6 +154,8 @@ export async function DELETE(
 
     // Delete department
     await staffService.deleteDepartment(departmentId);
+
+    return NextResponse.json({ message: "Department deleted successfully" });
   } catch (error: unknown) {
     console.error("Error deleting department:", error);
 
