@@ -234,6 +234,83 @@ pnpm dev
 
 La aplicación estará disponible en [http://localhost:3000](http://localhost:3000)
 
+### 📝 Flujo de Desarrollo Recomendado
+
+#### 1. **Creando Nuevas Funcionalidades**
+
+```bash
+# 1. Crear nueva rama para la funcionalidad
+git checkout -b feature/nueva-funcionalidad
+
+# 2. Estructurar según arquitectura
+mkdir -p hooks/nueva-area
+mkdir -p lib/nueva-area  
+mkdir -p components/nueva-area
+
+# 3. Implementar en orden:
+# - Tipos TypeScript (si necesarios)
+# - Funciones utilitarias (lib/)
+# - Hooks de lógica (hooks/)
+# - Componentes de UI (components/)
+
+# 4. Actualizar barrel exports
+echo "export * from './nuevo-hook';" >> hooks/nueva-area/index.ts
+echo "export * from './nueva-util';" >> lib/nueva-area/index.ts
+echo "export * from './nuevo-componente';" >> components/nueva-area/index.ts
+```
+
+#### 2. **Testing Durante Desarrollo**
+
+```bash
+# Ejecutar tests al crear nuevas funciones puras
+pnpm test lib/nueva-area/
+
+# Verificar types con TypeScript
+pnpm type-check
+
+# Lint y format automático
+pnpm lint
+pnpm format
+```
+
+#### 3. **Verificación Antes de Commit**
+
+```bash
+# 1. Verificar que compila sin errores
+pnpm build
+
+# 2. Ejecutar tests completos
+pnpm test
+
+# 3. Verificar que la BD funciona
+pnpm db:studio  # Revisar en http://localhost:5555
+
+# 4. Commit con mensaje descriptivo
+git add .
+git commit -m "feat(rooms): add room filtering by amenities
+
+- Add filterByAmenities utility function
+- Create useRoomAmenityFilter hook  
+- Update RoomGrid to support amenity filtering
+- Add AmenityFilter component"
+```
+
+#### 4. **Debugging y Development Tools**
+
+```bash
+# Ver base de datos gráficamente
+pnpm db:studio
+
+# Examinar esquema actual
+pnpm db:inspect
+
+# Reiniciar DB con datos frescos
+pnpm db:reset && pnpm db:seed
+
+# Ver logs del servidor
+pnpm dev --turbo  # Modo turbo para builds más rápidos
+```
+
 #### Modo Producción
 
 ```bash
@@ -277,11 +354,32 @@ hotel-oasis-pms/
 │   ├── ui/                       # Primitivas de UI (Radix)
 │   ├── auth/                     # Componentes de autenticación
 │   ├── dashboard/                # Componentes del dashboard
+│   ├── rooms/                    # 🆕 Componentes especializados de habitaciones
+│   │   ├── room-card.tsx         # Tarjeta individual de habitación
+│   │   ├── room-status-badge.tsx # Badge de estado
+│   │   ├── room-amenities.tsx    # Lista de amenidades
+│   │   ├── room-door-status.tsx  # Indicador de puerta
+│   │   ├── room-actions.tsx      # Menú de acciones
+│   │   ├── edit-room-dialog.tsx  # Modal de edición
+│   │   └── index.ts              # Barrel exports
 │   └── staff/                    # Componentes de personal
 ├── context/                      # Context Providers
 ├── hooks/                        # Custom Hooks
+│   └── rooms/                    # 🆕 Hooks especializados de habitaciones
+│       ├── use-rooms.ts          # Data fetching
+│       ├── use-room-filters.ts   # Filtrado
+│       ├── use-room-grouping.ts  # Agrupación/ordenamiento
+│       ├── use-room-updates.ts   # Actualizaciones
+│       ├── use-room-grid.ts      # Hook principal unificado
+│       └── index.ts              # Barrel exports
 ├── lib/                          # Utilidades y configuración
+│   ├── rooms/                    # 🆕 Lógica pura de habitaciones
+│   │   ├── room-filters.ts       # Funciones de filtrado
+│   │   ├── room-sorting.ts       # Funciones de ordenamiento
+│   │   ├── room-utils.ts         # Utilidades generales
+│   │   └── index.ts              # Barrel exports
 │   ├── validations/              # Esquemas Zod
+│   ├── room-constants.ts         # Constantes de habitaciones
 │   ├── prisma.ts                 # Cliente Prisma
 │   └── utils.ts                  # Utilidades generales
 ├── prisma/                       # Configuración Prisma
@@ -292,7 +390,255 @@ hotel-oasis-pms/
 └── types/                        # Definiciones TypeScript
 ```
 
-## 🗃️ Base de Datos
+## 🏗️ Arquitectura de Componentes
+
+El proyecto implementa una **arquitectura limpia** con separación clara de responsabilidades:
+
+### 📋 Principios de Diseño
+
+- **Separación de Concerns**: Lógica separada de presentación
+- **Componentes Puros**: Solo se encargan del renderizado
+- **Hooks Especializados**: Manejan estado y efectos
+- **Funciones Utilitarias**: Lógica pura reutilizable
+- **Tipado Fuerte**: TypeScript en toda la aplicación
+
+### 🎯 Estructura por Capas
+
+```
+┌─────────────────────┐
+│   Componentes UI    │ ← Solo presentación
+├─────────────────────┤
+│  Custom Hooks       │ ← Estado y efectos
+├─────────────────────┤
+│  Funciones Utils    │ ← Lógica pura
+├─────────────────────┤
+│   Servicios API     │ ← Comunicación backend
+└─────────────────────┘
+```
+
+### 🧩 Ejemplo: Sistema de Habitaciones
+
+#### **Componentes de Presentación** (`components/rooms/`)
+```tsx
+// Componentes especializados y reutilizables
+<RoomCard />          // Tarjeta individual
+<RoomStatusBadge />   // Badge de estado
+<RoomAmenities />     // Lista de amenidades
+<RoomDoorStatus />    // Indicador de puerta
+<EditRoomDialog />    // Modal de edición
+```
+
+#### **Hooks de Lógica** (`hooks/rooms/`)
+```tsx
+// Hooks especializados para diferentes aspectos
+useRooms()           // Data fetching con SWR
+useRoomFilters()     // Filtrado inteligente
+useRoomGrouping()    // Agrupación por piso
+useRoomUpdates()     // Actualizaciones optimistas
+useRoomGrid()        // Hook principal unificado
+```
+
+#### **Utilidades Puras** (`lib/rooms/`)
+```tsx
+// Funciones puras sin efectos secundarios
+applyRoomFilters()   // Filtrado de datos
+sortRooms()          // Ordenamiento
+groupRoomsByFloor()  // Agrupación
+formatRoomPrice()    // Formateo de precios
+```
+
+### 🔄 Flujo de Datos
+
+```
+API ──→ useRooms() ──→ useRoomFilters() ──→ useRoomGrouping() ──→ RoomGrid
+                                                                      ↓
+                                                                 RoomCard
+```
+
+### 📦 Uso de Componentes
+
+#### **Básico - Componente Individual**
+```tsx
+import { RoomStatusBadge } from "@/components/rooms";
+
+<RoomStatusBadge status="OCUPADA" />
+```
+
+#### **Intermedio - Hook Especializado**
+```tsx
+import { useRoomFilters } from "@/hooks/rooms";
+
+const { filteredRooms, filterCount } = useRoomFilters(rooms, {
+  searchQuery: "Suite",
+  floorFilter: "3",
+  typeFilter: "SUITE_A"
+});
+```
+
+#### **Avanzado - Hook Principal**
+```tsx
+import { useRoomGrid } from "@/hooks/rooms";
+
+const {
+  displayRooms,
+  groupedRooms,
+  sortedFloors,
+  isLoading,
+  updateRoom
+} = useRoomGrid({
+  searchQuery,
+  floorFilter,
+  typeFilter
+});
+```
+
+### ✨ Beneficios de la Arquitectura
+
+- **🧪 Testeable**: Funciones puras fáciles de testear
+- **🔄 Reutilizable**: Componentes y hooks reutilizables
+- **📈 Escalable**: Fácil agregar nuevas funcionalidades
+- **🛠️ Mantenible**: Código organizado y predecible
+- **⚡ Performance**: Optimizaciones automáticas con memoización
+
+## � Guía de Desarrollo
+
+### 🎯 Creando Nuevos Componentes
+
+#### 1. **Componentes de Presentación**
+```tsx
+// ✅ Correcto - Solo UI
+interface RoomCardProps {
+  room: Room;
+  onEdit: (room: Room) => void;
+}
+
+export function RoomCard({ room, onEdit }: RoomCardProps) {
+  return (
+    <Card>
+      <RoomStatusBadge status={room.status} />
+      <span>{room.number}</span>
+      <button onClick={() => onEdit(room)}>Editar</button>
+    </Card>
+  );
+}
+
+// ❌ Incorrecto - Mezclando lógica
+export function RoomCard({ roomId }: { roomId: string }) {
+  const { data: room } = useSWR(`/api/rooms/${roomId}`); // ❌ Fetching en componente
+  const [status, setStatus] = useState(room?.status); // ❌ Estado en presentación
+  
+  const updateStatus = async () => { /* ... */ }; // ❌ Lógica de negocio
+  
+  return <Card>...</Card>;
+}
+```
+
+#### 2. **Custom Hooks**
+```tsx
+// ✅ Correcto - Hook especializado
+export function useRoomUpdates() {
+  const { mutate } = useSWRConfig();
+  
+  const updateRoom = useCallback(async (roomId: string, data: Partial<Room>) => {
+    // Optimistic update
+    await mutate(
+      `/api/rooms/${roomId}`,
+      updateRoomService(roomId, data),
+      { optimisticData: data }
+    );
+  }, [mutate]);
+  
+  return { updateRoom };
+}
+
+// ❌ Incorrecto - Hook genérico sobrecargado
+export function useRooms() {
+  // ❌ Demasiadas responsabilidades en un solo hook
+  const [rooms, setRooms] = useState([]);
+  const [filteredRooms, setFilteredRooms] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedFloor, setSelectedFloor] = useState('');
+  
+  // 50+ líneas de lógica mezclada...
+}
+```
+
+#### 3. **Funciones Utilitarias**
+```tsx
+// ✅ Correcto - Función pura
+export function formatRoomPrice(price: number, currency = 'USD'): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency,
+  }).format(price);
+}
+
+// ✅ Correcto - Función de filtrado
+export function filterRoomsByType(rooms: Room[], type: RoomType): Room[] {
+  return rooms.filter(room => room.type === type);
+}
+
+// ❌ Incorrecto - Función con efectos secundarios
+export function updateRoomStatus(roomId: string, status: RoomStatus) {
+  // ❌ Llamada a API en función utilitaria
+  fetch(`/api/rooms/${roomId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status })
+  });
+}
+```
+
+### 📁 Convenciones de Archivos
+
+#### **Estructura de Hooks**
+```
+hooks/
+├── rooms/
+│   ├── use-rooms.ts          # Data fetching principal
+│   ├── use-room-filters.ts   # Lógica de filtrado
+│   ├── use-room-updates.ts   # Actualizaciones
+│   ├── use-room-grid.ts      # Hook principal
+│   └── index.ts              # Exports centralizados
+```
+
+#### **Estructura de Componentes**
+```
+components/
+├── rooms/
+│   ├── room-card.tsx         # PascalCase para componentes
+│   ├── room-status-badge.tsx # kebab-case para archivos
+│   ├── room-amenities.tsx    # Componentes específicos
+│   └── index.ts              # Barrel exports
+```
+
+#### **Estructura de Utilidades**
+```
+lib/
+├── rooms/
+│   ├── room-filters.ts       # Funciones de filtrado
+│   ├── room-sorting.ts       # Funciones de ordenamiento
+│   ├── room-utils.ts         # Utilidades generales
+│   └── index.ts              # Exports centralizados
+```
+
+### 🔄 Workflow de Desarrollo
+
+1. **Análisis**: Identificar si es lógica de UI, estado, o función pura
+2. **Ubicación**: Determinar carpeta correcta según responsabilidad
+3. **Implementación**: Seguir patrones establecidos
+4. **Testing**: Escribir tests unitarios para funciones puras
+5. **Integración**: Usar barrel exports para imports limpios
+
+### 📋 Checklist de Code Review
+
+- [ ] ¿El componente solo se encarga de la presentación?
+- [ ] ¿La lógica de estado está en hooks especializados?
+- [ ] ¿Las funciones utilitarias son puras (sin efectos secundarios)?
+- [ ] ¿Se usan los tipos de Prisma en lugar de interfaces duplicadas?
+- [ ] ¿Los imports usan barrel exports cuando están disponibles?
+- [ ] ¿Hay tests unitarios para las funciones puras?
+
+## �🗃️ Base de Datos
 
 ### Modelos Principales
 
@@ -442,13 +788,204 @@ Asegúrate de que tu `package.json` incluya:
 
 Se incluirá configuración Docker para facilitar el despliegue.
 
-## 🤝 Contribución
+## 🎯 Ejemplos Prácticos
 
-1. Fork el proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/nueva-funcionalidad`)
-3. Commit tus cambios (`git commit -m 'Agregar nueva funcionalidad'`)
-4. Push a la rama (`git push origin feature/nueva-funcionalidad`)
-5. Abre un Pull Request
+### 🏨 Ejemplo 1: Crear Nuevo Filtro de Habitaciones
+
+```tsx
+// 1. Función pura en lib/rooms/room-filters.ts
+export function filterRoomsByCapacity(rooms: Room[], minCapacity: number): Room[] {
+  return rooms.filter(room => room.capacity >= minCapacity);
+}
+
+// 2. Hook especializado en hooks/rooms/use-room-capacity-filter.ts
+export function useRoomCapacityFilter(rooms: Room[]) {
+  const [minCapacity, setMinCapacity] = useState(1);
+  
+  const filteredRooms = useMemo(
+    () => filterRoomsByCapacity(rooms, minCapacity),
+    [rooms, minCapacity]
+  );
+  
+  return { filteredRooms, minCapacity, setMinCapacity };
+}
+
+// 3. Componente de UI en components/rooms/capacity-filter.tsx
+export function CapacityFilter({ value, onChange }: CapacityFilterProps) {
+  return (
+    <Select value={value.toString()} onValueChange={(v) => onChange(Number(v))}>
+      <SelectTrigger>
+        <SelectValue placeholder="Capacidad mínima" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="1">1+ personas</SelectItem>
+        <SelectItem value="2">2+ personas</SelectItem>
+        <SelectItem value="4">4+ personas</SelectItem>
+      </SelectContent>
+    </Select>
+  );
+}
+
+// 4. Integración en room-grid.tsx
+const { filteredRooms, minCapacity, setMinCapacity } = useRoomCapacityFilter(rooms);
+
+return (
+  <div>
+    <CapacityFilter value={minCapacity} onChange={setMinCapacity} />
+    {filteredRooms.map(room => <RoomCard key={room.id} room={room} />)}
+  </div>
+);
+```
+
+### 📊 Ejemplo 2: Componente de Dashboard con Hooks
+
+```tsx
+// hooks/dashboard/use-hotel-stats.ts
+export function useHotelStats() {
+  const { data: rooms } = useRooms();
+  const { data: bookings } = useBookings();
+  
+  const stats = useMemo(() => ({
+    occupancyRate: calculateOccupancyRate(rooms, bookings),
+    availableRooms: rooms?.filter(r => r.status === 'DISPONIBLE').length ?? 0,
+    totalRevenue: calculateTotalRevenue(bookings),
+    checkInsToday: getCheckInsToday(bookings)
+  }), [rooms, bookings]);
+  
+  return { stats, isLoading: !rooms || !bookings };
+}
+
+// components/dashboard/hotel-stats.tsx
+export function HotelStats() {
+  const { stats, isLoading } = useHotelStats();
+  
+  if (isLoading) return <StatsLoading />;
+  
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <StatCard
+        title="Ocupación"
+        value={`${stats.occupancyRate}%`}
+        icon={<Hotel />}
+      />
+      <StatCard
+        title="Habitaciones Disponibles"
+        value={stats.availableRooms}
+        icon={<Bed />}
+      />
+      <StatCard
+        title="Ingresos Hoy"
+        value={formatCurrency(stats.totalRevenue)}
+        icon={<DollarSign />}
+      />
+      <StatCard
+        title="Check-ins Hoy"
+        value={stats.checkInsToday}
+        icon={<Calendar />}
+      />
+    </div>
+  );
+}
+```
+
+### 🔄 Ejemplo 3: Actualizaciones Optimistas
+
+```tsx
+// hooks/rooms/use-room-status-update.ts
+export function useRoomStatusUpdate() {
+  const { mutate } = useSWRConfig();
+  
+  const updateStatus = useCallback(async (roomId: string, newStatus: RoomStatus) => {
+    const key = `/api/rooms/${roomId}`;
+    
+    try {
+      // Actualización optimista
+      await mutate(
+        key,
+        (current: Room) => ({ ...current, status: newStatus }),
+        { revalidate: false }
+      );
+      
+      // Actualización real
+      await updateRoomService(roomId, { status: newStatus });
+      
+      // Revalidar para confirmar
+      await mutate(key);
+      
+      toast.success(`Habitación ${roomId} actualizada a ${newStatus}`);
+    } catch (error) {
+      // Revertir en caso de error
+      await mutate(key);
+      toast.error('Error al actualizar habitación');
+    }
+  }, [mutate]);
+  
+  return { updateStatus };
+}
+
+// components/rooms/quick-status-buttons.tsx
+export function QuickStatusButtons({ room }: { room: Room }) {
+  const { updateStatus } = useRoomStatusUpdate();
+  
+  return (
+    <div className="flex gap-2">
+      <Button 
+        size="sm" 
+        onClick={() => updateStatus(room.id, 'DISPONIBLE')}
+        variant={room.status === 'DISPONIBLE' ? 'default' : 'outline'}
+      >
+        Disponible
+      </Button>
+      <Button 
+        size="sm" 
+        onClick={() => updateStatus(room.id, 'OCUPADA')}
+        variant={room.status === 'OCUPADA' ? 'default' : 'outline'}
+      >
+        Ocupada
+      </Button>
+      <Button 
+        size="sm" 
+        onClick={() => updateStatus(room.id, 'MANTENIMIENTO')}
+        variant={room.status === 'MANTENIMIENTO' ? 'default' : 'outline'}
+      >
+        Mantenimiento
+      </Button>
+    </div>
+  );
+}
+```
+
+## 🤝 Contribuir
+
+### Proceso de Contribución
+
+1. **Fork del proyecto** 
+2. **Crea una rama para tu feature** (`git checkout -b feature/nueva-funcionalidad`)
+3. **Sigue la arquitectura establecida**:
+   - Funciones puras → `lib/`
+   - Lógica de estado → `hooks/`
+   - UI pura → `components/`
+4. **Escribe tests** para funciones utilitarias
+5. **Commit con mensajes descriptivos** siguiendo [Conventional Commits](https://www.conventionalcommits.org/)
+6. **Push a tu rama** (`git push origin feature/nueva-funcionalidad`)
+7. **Abre un Pull Request**
+
+### Estándares de Código
+
+- ✅ **TypeScript estricto** - No usar `any`
+- ✅ **Componentes puros** - Solo presentación
+- ✅ **Hooks especializados** - Una responsabilidad por hook
+- ✅ **Funciones puras** - Sin efectos secundarios en `lib/`
+- ✅ **Barrel exports** - Usar archivos `index.ts`
+- ✅ **Tests unitarios** - Para funciones de lógica de negocio
+
+### Issues y Sugerencias
+
+Si encuentras bugs o tienes ideas para mejoras:
+1. Busca en los [issues existentes](../../issues)
+2. Si no existe, [crea uno nuevo](../../issues/new)
+3. Describe el problema o mejora detalladamente
+4. Incluye steps to reproduce para bugs
 
 ## 📄 Licencia
 
