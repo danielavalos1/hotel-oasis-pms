@@ -14,7 +14,12 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:generate": "prisma generate",
-    "test": "jest"
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:api": "jest --selectProjects=\"API Tests\"",
+    "test:components": "jest --selectProjects=\"Component Tests\"",
+    "test:coverage": "jest --coverage",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -72,6 +77,9 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
+    "@testing-library/jest-dom": "^6.6.4",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
     "@types/bcrypt": "^5.0.2",
     "@types/jest": "^30.0.0",
     "@types/node": "^22.10.7",
@@ -82,12 +90,21 @@
     "eslint": "^9.18.0",
     "eslint-config-next": "15.1.5",
     "jest": "^30.0.4",
+    "jest-environment-jsdom": "^30.0.5",
+    "msw": "^2.10.4",
     "postcss": "^8.5.1",
     "prisma": "^6.9.0",
     "supertest": "^7.1.3",
     "tailwindcss": "^3.4.17",
     "ts-jest": "^29.4.0",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "undici": "^7.13.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "glob": "^10.3.10",
+      "inflight": "^1.0.6"
+    }
   }
 }

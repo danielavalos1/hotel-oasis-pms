@@ -1,13 +1,50 @@
 module.exports = {
   preset: "ts-jest",
-  testEnvironment: "node",
-  moduleNameMapper: {
-    "^@/(.*)$": "<rootDir>/$1",
-  },
-  // Ejecutar tests de API secuencialmente para evitar conflictos de DB
-  maxWorkers: 1,
-  // Timeout más largo para tests que involucran DB
-  testTimeout: 30000,
-  // Configurar el entorno de test
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+  // Configuración para múltiples entornos de test
+  projects: [
+    {
+      // Tests de API (Node.js environment)
+      displayName: "API Tests",
+      testEnvironment: "node", 
+      testMatch: ["<rootDir>/__tests__/api/**/*.test.ts"],
+      moduleNameMapper: {
+        "^@/(.*)$": "<rootDir>/$1",
+      },
+      maxWorkers: 1, // API tests secuenciales para evitar conflictos de DB
+      testTimeout: 30000,
+      setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+    },
+    {
+      // Tests de Componentes (jsdom environment)
+      displayName: "Component Tests",
+      testEnvironment: "jsdom",
+      testMatch: [
+        "<rootDir>/__tests__/components/**/*.test.tsx",
+        "<rootDir>/__tests__/hooks/**/*.test.tsx",
+        "<rootDir>/__tests__/lib/**/*.test.ts"
+      ],
+      moduleNameMapper: {
+        "^@/(.*)$": "<rootDir>/$1",
+      },
+      setupFilesAfterEnv: ['<rootDir>/jest.setup.react.js'],
+      // Configuración específica para React
+      transform: {
+        "^.+\\.(ts|tsx)$": ["ts-jest", {
+          tsconfig: {
+            jsx: "react-jsx",
+          },
+        }],
+      },
+      moduleFileExtensions: ["ts", "tsx", "js", "jsx"],
+    }
+  ],
+  // Configuración global
+  collectCoverageFrom: [
+    "components/**/*.{ts,tsx}",
+    "hooks/**/*.{ts,tsx}",
+    "lib/**/*.{ts,tsx}",
+    "services/**/*.{ts,tsx}",
+    "!**/*.d.ts",
+    "!**/node_modules/**",
+  ],
 };
