@@ -7,13 +7,21 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Trash } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { MoreHorizontal, Trash, Plus, LogIn, LogOut } from "lucide-react";
 import { Room, RoomStatus, RoomType } from "@prisma/client";
 import { RoomStatusBadge } from "./room-status-badge";
 import { RoomAmenities } from "./room-amenities";
 import { RoomDoorStatus } from "./room-door-status";
 import { EditRoomDialog } from "./edit-room-dialog";
 import { BookingEventModal } from "@/components/dashboard/booking-event-modal";
+import { NewBookingForm } from "@/app/dashboard/bookings/new-booking-form";
 import { 
   ROOM_TYPE_LABELS, 
   ROOM_BG_VARIANTS,
@@ -21,6 +29,7 @@ import {
   getRoomCapacityText,
   needsLightText
 } from "@/lib/rooms";
+import { useState } from "react";
 
 const roomTypeLabels: Record<RoomType, string> = ROOM_TYPE_LABELS;
 const roomBgVariants: Record<RoomStatus, string> = ROOM_BG_VARIANTS;
@@ -33,6 +42,12 @@ interface RoomCardProps {
 
 export function RoomCard({ room, rooms, onRoomUpdate }: RoomCardProps) {
   const isLightText = needsLightText(room);
+  const [isNewBookingOpen, setIsNewBookingOpen] = useState(false);
+
+  // Determinar qué opciones mostrar según el estado de la habitación
+  const showCheckIn = room.status === "RESERVADA"; // Solo si tiene reserva
+  const showCheckOut = room.status === "OCUPADA"; // Solo si está ocupada
+  const showNewBooking = room.status === "LIBRE"; // Solo si está libre
 
   return (
     <Card
@@ -68,37 +83,73 @@ export function RoomCard({ room, rooms, onRoomUpdate }: RoomCardProps) {
           <DropdownMenuContent align="end" className="w-40">
             <EditRoomDialog room={room} onSave={onRoomUpdate} />
 
-            <DropdownMenuItem>
-              <BookingEventModal
-                bookingId={1}
-                userId={1}
-                rooms={[room]}
-                eventType="CHECKIN"
-                onEvent={() => {}}
-              />
-            </DropdownMenuItem>
+            {showNewBooking && (
+              <>
+                <Dialog open={isNewBookingOpen} onOpenChange={setIsNewBookingOpen}>
+                  <DialogTrigger asChild>
+                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Nueva Reserva
+                    </DropdownMenuItem>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[600px]">
+                    <DialogHeader>
+                      <DialogTitle>Nueva Reserva - Habitación {room.roomNumber}</DialogTitle>
+                    </DialogHeader>
+                    <NewBookingForm 
+                      preselectedRoom={room}
+                      onSuccess={() => setIsNewBookingOpen(false)} 
+                    />
+                  </DialogContent>
+                </Dialog>
+                <DropdownMenuSeparator />
+              </>
+            )}
 
-            <DropdownMenuItem>
-              <BookingEventModal
-                bookingId={1}
-                userId={1}
-                rooms={[room]}
-                eventType="CHECKOUT"
-                onEvent={() => {}}
-              />
-            </DropdownMenuItem>
+            {showCheckIn && (
+              <DropdownMenuItem>
+                <BookingEventModal
+                  bookingId={1}
+                  userId={1}
+                  rooms={[room]}
+                  eventType="CHECKIN"
+                  onEvent={() => {}}
+                />
+                <LogIn className="mr-2 h-4 w-4" />
+                Check-in
+              </DropdownMenuItem>
+            )}
 
-            <DropdownMenuItem>
-              <BookingEventModal
-                bookingId={1}
-                userId={1}
-                rooms={rooms}
-                eventType="OTHER"
-                onEvent={() => {}}
-              />
-            </DropdownMenuItem>
+            {showCheckOut && (
+              <DropdownMenuItem>
+                <BookingEventModal
+                  bookingId={1}
+                  userId={1}
+                  rooms={[room]}
+                  eventType="CHECKOUT"
+                  onEvent={() => {}}
+                />
+                <LogOut className="mr-2 h-4 w-4" />
+                Check-out
+              </DropdownMenuItem>
+            )}
 
-            <DropdownMenuSeparator />
+            {(showCheckIn || showCheckOut) && (
+              <>
+                <DropdownMenuItem>
+                  <BookingEventModal
+                    bookingId={1}
+                    userId={1}
+                    rooms={rooms}
+                    eventType="OTHER"
+                    onEvent={() => {}}
+                  />
+                  Otro evento
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+              </>
+            )}
+
             <DropdownMenuItem>Ver reservas</DropdownMenuItem>
             <DropdownMenuItem>Cambiar estado</DropdownMenuItem>
             <DropdownMenuSeparator />

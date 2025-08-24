@@ -39,7 +39,7 @@ import {
 } from "@/types/booking-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { RoomType } from "@prisma/client";
+import { Room, RoomType } from "@prisma/client";
 import { useToast } from "@/hooks/use-toast";
 
 // Esquema de validación para el formulario
@@ -64,9 +64,10 @@ const bookingFormSchema = z.object({
 
 interface NewBookingFormProps {
   onSuccess: () => void;
+  preselectedRoom?: Room;
 }
 
-export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
+export function NewBookingForm({ onSuccess, preselectedRoom }: NewBookingFormProps) {
   const [activeTab, setActiveTab] = useState("details");
   const [isLoading, setIsLoading] = useState(false);
   const [availableRooms, setAvailableRooms] = useState<RoomOption[]>([]);
@@ -103,7 +104,9 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
       checkOut: null,
       adults: "1",
       children: "0",
-      rooms: [{ roomType: "", roomId: "" }],
+      rooms: preselectedRoom 
+        ? [{ roomType: preselectedRoom.type, roomId: preselectedRoom.id.toString() }]
+        : [{ roomType: "", roomId: "" }],
       notes: "",
     },
   });
@@ -125,6 +128,21 @@ export function NewBookingForm({ onSuccess }: NewBookingFormProps) {
     const room = availableRooms.find((r) => r.id.toString() === roomId);
     return room?.capacity ?? 2; // fallback a 2 si no se encuentra
   };
+
+  // Inicializar habitación preseleccionada
+  useEffect(() => {
+    if (preselectedRoom) {
+      const roomOption: RoomOption = {
+        id: preselectedRoom.id,
+        roomNumber: preselectedRoom.roomNumber,
+        roomType: preselectedRoom.type,
+        pricePerNight: Number(preselectedRoom.pricePerNight),
+        capacity: preselectedRoom.capacity,
+      };
+      setAvailableRooms([roomOption]);
+      setCanSelectRooms(true);
+    }
+  }, [preselectedRoom]);
 
   // Suma la capacidad total de las habitaciones seleccionadas
   const totalCapacity = fields.reduce((sum, _, index) => {
