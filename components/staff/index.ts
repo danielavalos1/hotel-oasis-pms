@@ -1,0 +1,11 @@
+// Barrel exports for staff components
+export { StaffContainer } from "./staff-container";
+export { StaffStats } from "./staff-stats";
+export { StaffFilters } from "./staff-filters";
+export { StaffList } from "./staff-list";
+export { StaffCard } from "./staff-card";
+export { StaffTabLayout } from "./staff-tab-layout";
+export { AttendanceManager } from "./attendance-manager";
+export { DepartmentManager } from "./department-manager";
+export { DocumentManager } from "./document-manager";
+export { ScheduleManager } from "./schedule-manager";

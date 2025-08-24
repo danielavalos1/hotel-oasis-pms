@@ -1,0 +1,31 @@
+{
+  "rooms": [
+    {
+      "id": 1,
+      "roomNumber": "101",
+      "type": "SENCILLA",
+      "status": "LIBRE",
+      "floor": 1,
+      "capacity": 2,
+      "pricePerNight": 80.00
+    },
+    {
+      "id": 2,
+      "roomNumber": "102", 
+      "type": "DOBLE",
+      "status": "OCUPADA",
+      "floor": 1,
+      "capacity": 4,
+      "pricePerNight": 120.00
+    },
+    {
+      "id": 3,
+      "roomNumber": "201",
+      "type": "SUITE_A",
+      "status": "RESERVADA", 
+      "floor": 2,
+      "capacity": 6,
+      "pricePerNight": 200.00
+    }
+  ]
+}

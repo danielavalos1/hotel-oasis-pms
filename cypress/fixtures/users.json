@@ -1,0 +1,17 @@
+{
+  "admin": {
+    "username": "admin",
+    "password": "admin123",
+    "role": "ADMIN"
+  },
+  "receptionist": {
+    "username": "receptionist", 
+    "password": "recep123",
+    "role": "RECEPTIONIST"
+  },
+  "housekeeper": {
+    "username": "housekeeper",
+    "password": "house123", 
+    "role": "HOUSEKEEPER"
+  }
+}

@@ -5,3 +5,5 @@ export { RoomAmenities } from "./room-amenities";
 export { RoomDoorStatus } from "./room-door-status";
 export { RoomActions } from "./room-actions";
 export { EditRoomDialog } from "./edit-room-dialog";
+export { RoomsList } from "./rooms-list";
+export { RoomStatus } from "./room-status";
