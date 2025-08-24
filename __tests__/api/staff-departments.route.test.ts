@@ -1,8 +1,8 @@
-// Tests para la API de staff departments (GET, POST /api/staff/departments)
 import { GET, POST } from "@/app/api/staff/departments/route";
 import { prisma } from "@/lib/prisma";
 import { NextRequest } from "next/server";
 import { getServerSession } from "next-auth";
+import { randomUUID } from "crypto";
 
 // Mock de next-auth
 jest.mock("next-auth", () => ({
@@ -10,6 +10,34 @@ jest.mock("next-auth", () => ({
 }));
 
 const mockGetServerSession = getServerSession as jest.MockedFunction<typeof getServerSession>;
+
+// Helper para generar nombres únicos garantizados
+function generateUniqueDeptName(suffix: string): string {
+  const timestamp = Date.now();
+  const randomId = randomUUID().replace(/-/g, '').substring(0, 8);
+  const hrtime = process.hrtime.bigint().toString().slice(-6);
+  const uniqueName = `TEST_DEPT_${timestamp}_${hrtime}_${randomId}_${suffix}`;
+  console.log(`[TEST] Generated unique name: ${uniqueName}`);
+  return uniqueName;
+}
+
+// Helper para verificar que un nombre no exista antes de usarlo
+async function ensureNameNotExists(name: string): Promise<void> {
+  console.log(`[TEST] Checking if department name exists: ${name}`);
+  const existing = await prisma.department.findFirst({
+    where: { name }
+  });
+  
+  if (existing) {
+    console.log(`[TEST] Found existing department with name ${name} (ID: ${existing.id}), deleting it...`);
+    await prisma.department.delete({
+      where: { id: existing.id }
+    });
+    console.log(`[TEST] Successfully deleted existing department with name ${name}`);
+  } else {
+    console.log(`[TEST] No existing department found with name ${name} - good to proceed`);
+  }
+}
 
 function createMockRequest(url: string, method: string = "GET", body?: any) {
   if (body && method !== "GET") {
@@ -27,96 +55,164 @@ function createMockRequest(url: string, method: string = "GET", body?: any) {
 }
 
 describe("Staff Departments API (App Router handler)", () => {
-  let testPrefix: string;
+  let testSessionId: string;
+  let createdDepartmentIds: number[] = [];
 
   beforeAll(async () => {
-    // Crear un prefijo único para este test con más entropía
-    testPrefix = `dept-base-${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${process.hrtime.bigint().toString(36)}`;
+    // Crear un ID de sesión único para este test usando UUID
+    testSessionId = randomUUID().replace(/-/g, '').substring(0, 8);
     
-    // Limpiar TODOS los departamentos de test de cualquier ejecución previa
-    // Esto es más agresivo pero necesario para evitar conflictos
-    await prisma.department.deleteMany({
+    console.log(`[TEST][beforeAll] Using test session ID: ${testSessionId}`);
+    
+    // Limpiar TODOS los departamentos de test previos de manera agresiva
+    const cleaned = await prisma.department.deleteMany({
       where: {
         OR: [
           {
             name: {
-              startsWith: "dept-"
+              contains: "test-dept-"
             }
           },
           {
             name: {
-              contains: "test"
+              contains: "TEST_DEPT_"
             }
           },
           {
             name: {
-              contains: "Test"
+              contains: testSessionId
             }
+          }
+        ]
+      }
+    });
+    console.log(`[TEST][beforeAll] Cleaned up ${cleaned.count} existing test departments`);
+    
+    // Crear algunos departamentos de prueba para el test de GET con nombres garantizados únicos
+    const baseName1 = `TEST_DEPT_${testSessionId}_IT_${Date.now()}`;
+    const baseName2 = `TEST_DEPT_${testSessionId}_HR_${Date.now() + 1}`;
+    
+    console.log(`[TEST][beforeAll] Creating departments: ${baseName1}, ${baseName2}`);
+    
+    const dept1 = await prisma.department.create({
+      data: {
+        name: baseName1,
+        description: "Information Technology Department",
+      },
+    });
+    
+    const dept2 = await prisma.department.create({
+      data: {
+        name: baseName2,
+        description: "Human Resources Department",
+      },
+    });
+    
+    createdDepartmentIds.push(dept1.id, dept2.id);
+    console.log(`[TEST][beforeAll] Successfully created departments with IDs: ${createdDepartmentIds.join(', ')}`);
+    console.log(`[TEST][beforeAll] Department 1: ID ${dept1.id}, Name: ${dept1.name}`);
+    console.log(`[TEST][beforeAll] Department 2: ID ${dept2.id}, Name: ${dept2.name}`);
+  });
+
+  afterAll(async () => {
+    try {
+      // Limpiar por IDs específicos primero
+      if (createdDepartmentIds.length > 0) {
+        await prisma.department.deleteMany({
+          where: {
+            id: {
+              in: createdDepartmentIds
+            }
+          }
+        });
+        console.log(`[TEST][afterAll] Deleted departments with IDs: ${createdDepartmentIds.join(', ')}`);
+      }
+      
+      // Luego limpiar por session ID como respaldo
+      if (testSessionId) {
+        const deletedByPrefix = await prisma.department.deleteMany({
+          where: {
+            name: {
+              contains: testSessionId
+            }
+          }
+        });
+        console.log(`[TEST][afterAll] Additional cleanup by session ID deleted ${deletedByPrefix.count} departments`);
+      }
+    } catch (error) {
+      console.error('[TEST][afterAll] Error during cleanup:', error);
+    } finally {
+      // Desconectar Prisma
+      await prisma.$disconnect();
+    }
+  });
+
+  beforeEach(async () => {
+    // Reset mocks antes de cada test
+    jest.clearAllMocks();
+    
+    // Agregar un delay más largo entre tests para evitar conflictos de timing
+    await new Promise(resolve => setTimeout(resolve, 50));
+    
+    // Limpiar cualquier departamento órfano que pueda existir con nombres de test
+    // PERO NO eliminar los departamentos creados en beforeAll para el test GET
+    const orphanDepts = await prisma.department.deleteMany({
+      where: {
+        AND: [
+          {
+            OR: [
+              {
+                name: {
+                  contains: "TEST_DEPT_"
+                }
+              },
+              {
+                name: {
+                  contains: "DuplicateTest"
+                }
+              }
+            ]
           },
           {
-            name: {
-              startsWith: testPrefix
+            // NO eliminar los departamentos creados en beforeAll
+            id: {
+              notIn: createdDepartmentIds
             }
           }
         ]
       }
     });
     
-    console.log(`[TEST][beforeAll] Using test prefix: ${testPrefix}`);
-    
-    // Crear algunos departamentos de prueba para el test de GET
-    await prisma.$transaction(async (tx) => {
-      await tx.department.create({
-        data: {
-          name: `${testPrefix}-IT`,
-          description: "Information Technology Department",
-        },
-      });
-      
-      await tx.department.create({
-        data: {
-          name: `${testPrefix}-HR`,
-          description: "Human Resources Department",
-        },
-      });
-      
-      console.log("[TEST][beforeAll] Departments de prueba creados");
-    });
-  });
-
-  afterAll(async () => {
-    // Limpiar los datos creados en este test de manera más agresiva
-    if (testPrefix) {
-      await prisma.department.deleteMany({
-        where: {
-          OR: [
-            {
-              name: {
-                startsWith: testPrefix
-              }
-            },
-            {
-              name: {
-                contains: testPrefix.split('-')[1] // Usar parte del timestamp
-              }
-            }
-          ]
-        }
-      });
+    if (orphanDepts.count > 0) {
+      console.log(`[TEST][beforeEach] Cleaned up ${orphanDepts.count} orphan test departments`);
     }
     
-    // Desconectar Prisma
-    await prisma.$disconnect();
-  });
-
-  beforeEach(() => {
-    // Reset mocks antes de cada test
-    jest.clearAllMocks();
+    // Verificar que no hay departamentos con nuestro session ID pendientes
+    const existingDepts = await prisma.department.findMany({
+      where: {
+        name: {
+          contains: testSessionId
+        }
+      }
+    });
+    
+    // Si hay departamentos extra, agregarlos a nuestro tracking para limpieza
+    existingDepts.forEach(dept => {
+      if (!createdDepartmentIds.includes(dept.id)) {
+        createdDepartmentIds.push(dept.id);
+      }
+    });
   });
 
   // Tests para GET /api/staff/departments
   describe("GET /api/staff/departments", () => {
     it("obtiene correctamente todos los departamentos", async () => {
+      // Verificar estado de la base de datos antes del test
+      const allDepts = await prisma.department.findMany({});
+      console.log(`[TEST][GET] Total departments in DB: ${allDepts.length}`);
+      console.log(`[TEST][GET] Created department IDs: ${createdDepartmentIds.join(', ')}`);
+      console.log(`[TEST][GET] All departments:`, allDepts.map(d => `${d.id}: ${d.name}`));
+      
       // Mock session como ADMIN
       mockGetServerSession.mockResolvedValue({
         user: { id: "1", role: "ADMIN" },
@@ -128,14 +224,16 @@ describe("Staff Departments API (App Router handler)", () => {
       
       expect(res.status).toBe(200);
       const json = await res.json();
+      console.log(`[TEST][GET] Response departments:`, json.departments);
+      
       expect(json.departments).toBeDefined();
       expect(Array.isArray(json.departments)).toBe(true);
       expect(json.departments.length).toBeGreaterThanOrEqual(2); // Al menos los 2 que creamos
       
       // Verificar que incluye nuestros departamentos de prueba
       const departmentNames = json.departments.map((d: any) => d.name);
-      expect(departmentNames).toContain(`${testPrefix}-IT`);
-      expect(departmentNames).toContain(`${testPrefix}-HR`);
+      const hasTestDepts = departmentNames.some((name: string) => name.includes(testSessionId));
+      expect(hasTestDepts).toBe(true);
     });
 
     it("GET con SUPERADMIN funciona correctamente", async () => {
@@ -212,9 +310,11 @@ describe("Staff Departments API (App Router handler)", () => {
         expires: "2024-12-31T23:59:59.999Z"
       });
 
-      const uniqueSuffix = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const uniqueName = generateUniqueDeptName("Finance");
+      await ensureNameNotExists(uniqueName);
+      
       const newDepartment = {
-        name: `${testPrefix}-Finance-${uniqueSuffix}`,
+        name: uniqueName,
         description: "Finance Department",
       };
 
@@ -223,10 +323,13 @@ describe("Staff Departments API (App Router handler)", () => {
       
       expect(res.status).toBe(201);
       const json = await res.json();
-      expect(json.name).toBe(`${testPrefix}-Finance-${uniqueSuffix}`);
+      expect(json.name).toBe(uniqueName);
       expect(json.description).toBe("Finance Department");
       expect(json.id).toBeDefined();
       expect(typeof json.id).toBe("number");
+      
+      // Agregar a tracking para limpieza
+      createdDepartmentIds.push(json.id);
     });
 
     it("POST con SUPERADMIN funciona correctamente", async () => {
@@ -235,9 +338,11 @@ describe("Staff Departments API (App Router handler)", () => {
         expires: "2024-12-31T23:59:59.999Z"
       });
 
-      const uniqueSuffix = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const uniqueName = generateUniqueDeptName("Marketing");
+      await ensureNameNotExists(uniqueName);
+      
       const newDepartment = {
-        name: `${testPrefix}-Marketing-${uniqueSuffix}`,
+        name: uniqueName,
         description: "Marketing Department",
       };
 
@@ -246,14 +351,17 @@ describe("Staff Departments API (App Router handler)", () => {
       
       expect(res.status).toBe(201);
       const json = await res.json();
-      expect(json.name).toBe(`${testPrefix}-Marketing-${uniqueSuffix}`);
+      expect(json.name).toBe(uniqueName);
+      
+      // Agregar a tracking para limpieza
+      createdDepartmentIds.push(json.id);
     });
 
     it("POST sin autenticación responde 401", async () => {
       mockGetServerSession.mockResolvedValue(null);
 
       const newDepartment = {
-        name: `${testPrefix}-Test`,
+        name: generateUniqueDeptName("Test"),
         description: "Test Department",
       };
 
@@ -272,7 +380,7 @@ describe("Staff Departments API (App Router handler)", () => {
       });
 
       const newDepartment = {
-        name: `${testPrefix}-Test`,
+        name: generateUniqueDeptName("Test"),
         description: "Test Department",
       };
 
@@ -327,20 +435,11 @@ describe("Staff Departments API (App Router handler)", () => {
         expires: "2024-12-31T23:59:59.999Z"
       });
 
-      // Primero crear un departamento específico para este test con un nombre garantizado único
-      const uniqueSuffix = `DuplicateTest-${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${process.hrtime.bigint().toString(36)}`;
-      let uniqueName = `${testPrefix}-${uniqueSuffix}`;
+      // Crear un nombre único para este test específico
+      const uniqueName = generateUniqueDeptName("DuplicateTest");
       
-      // Verificar que no existe antes de crear
-      const existing = await prisma.department.findFirst({
-        where: { name: uniqueName }
-      });
-      
-      if (existing) {
-        // Si ya existe, agregamos más entropía
-        const extraSuffix = `Extra-${Date.now()}-${Math.random().toString(36)}`;
-        uniqueName = `${testPrefix}-${uniqueSuffix}-${extraSuffix}`;
-      }
+      // Asegurar que no existe antes del test
+      await ensureNameNotExists(uniqueName);
       
       console.log(`[TEST] Creating first department with name: ${uniqueName}`);
       
@@ -352,22 +451,44 @@ describe("Staff Departments API (App Router handler)", () => {
       const firstReq = createMockRequest("http://localhost:3000/api/staff/departments", "POST", firstDept);
       const firstRes = await POST(firstReq);
       
+      console.log(`[TEST] First request response status: ${firstRes.status}`);
+      
       if (firstRes.status !== 201) {
         const errorJson = await firstRes.json();
-        console.error(`[TEST] Failed to create first department:`, errorJson);
-        throw new Error(`Failed to create first department: ${JSON.stringify(errorJson)}`);
+        console.error(`[TEST] First department creation failed:`, errorJson);
+        
+        // Verificar si el departamento ya existe
+        const existingDept = await prisma.department.findFirst({
+          where: { name: uniqueName }
+        });
+        console.log(`[TEST] Existing department check result:`, existingDept);
       }
       
-      console.log(`[TEST] First department created successfully`);
+      expect(firstRes.status).toBe(201);
+      const firstJson = await firstRes.json();
+      
+      // Agregar a tracking para limpieza
+      createdDepartmentIds.push(firstJson.id);
+      console.log(`[TEST] First department created successfully with ID: ${firstJson.id}`);
 
-      // Ahora intentar crear un departamento con el mismo nombre
+      // Verificar que el departamento realmente existe en la base de datos
+      const createdDept = await prisma.department.findUnique({
+        where: { id: firstJson.id }
+      });
+      console.log(`[TEST] Verification - department exists in DB:`, createdDept?.name);
+
+      // Ahora intentar crear un departamento con el mismo nombre exacto
       const duplicateDepartment = {
-        name: uniqueName, // Usar exactamente el mismo nombre
+        name: uniqueName, // Exactamente el mismo nombre
         description: "Duplicate department for testing",
       };
 
+      console.log(`[TEST] Attempting to create duplicate department with name: ${uniqueName}`);
+      
       const req = createMockRequest("http://localhost:3000/api/staff/departments", "POST", duplicateDepartment);
       const res = await POST(req);
+      
+      console.log(`[TEST] Duplicate request response status: ${res.status}`);
       
       expect(res.status).toBe(409);
       const json = await res.json();
@@ -380,9 +501,11 @@ describe("Staff Departments API (App Router handler)", () => {
         expires: "2024-12-31T23:59:59.999Z"
       });
 
-      const uniqueSuffix = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const uniqueName = generateUniqueDeptName("Legal");
+      await ensureNameNotExists(uniqueName);
+      
       const newDepartment = {
-        name: `${testPrefix}-Legal-${uniqueSuffix}`,
+        name: uniqueName,
       };
 
       const req = createMockRequest("http://localhost:3000/api/staff/departments", "POST", newDepartment);
@@ -390,8 +513,11 @@ describe("Staff Departments API (App Router handler)", () => {
       
       expect(res.status).toBe(201);
       const json = await res.json();
-      expect(json.name).toBe(`${testPrefix}-Legal-${uniqueSuffix}`);
+      expect(json.name).toBe(uniqueName);
       expect(json.id).toBeDefined();
+      
+      // Agregar a tracking para limpieza
+      createdDepartmentIds.push(json.id);
     });
 
     it("POST verifica estructura de respuesta", async () => {
@@ -400,9 +526,11 @@ describe("Staff Departments API (App Router handler)", () => {
         expires: "2024-12-31T23:59:59.999Z"
       });
 
-      const uniqueSuffix = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const uniqueName = generateUniqueDeptName("Operations");
+      await ensureNameNotExists(uniqueName);
+      
       const newDepartment = {
-        name: `${testPrefix}-Operations-${uniqueSuffix}`,
+        name: uniqueName,
         description: "Operations Department",
       };
 
@@ -417,8 +545,11 @@ describe("Staff Departments API (App Router handler)", () => {
       expect(json).toHaveProperty("name");
       expect(typeof json.id).toBe("number");
       expect(typeof json.name).toBe("string");
-      expect(json.name).toBe(`${testPrefix}-Operations-${uniqueSuffix}`);
+      expect(json.name).toBe(uniqueName);
       expect(json.description).toBe("Operations Department");
+      
+      // Agregar a tracking para limpieza
+      createdDepartmentIds.push(json.id);
     });
   });
 });

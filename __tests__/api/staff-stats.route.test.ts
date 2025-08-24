@@ -213,7 +213,7 @@ describe("Staff Stats API (App Router handler)", () => {
       expect(json.stats).toHaveProperty('pendingDocuments');
       expect(json.stats).toHaveProperty('attendance');
       expect(json.stats).toHaveProperty('employeeStatus');
-      expect(json.stats).toHaveProperty('departments');
+      expect(json.stats).toHaveProperty('departmentDistribution');
 
       // Verificar estadísticas básicas
       expect(typeof json.stats.totalStaff).toBe('number');
@@ -235,8 +235,8 @@ describe("Staff Stats API (App Router handler)", () => {
       expect(json.stats.employeeStatus).toHaveProperty('suspended');
       expect(json.stats.employeeStatus).toHaveProperty('terminated');
 
-      // Verificar que departments es un array
-      expect(Array.isArray(json.stats.departments)).toBe(true);
+      // Verificar que departmentDistribution es un array
+      expect(Array.isArray(json.stats.departmentDistribution)).toBe(true);
     });
 
     it("verifica que las estadísticas de asistencia reflejan los datos de prueba", async () => {
@@ -292,7 +292,7 @@ describe("Staff Stats API (App Router handler)", () => {
       const json = await res.json();
       
       // Buscar nuestro departamento de prueba
-      const testDepartment = json.stats.departments.find(
+      const testDepartment = json.stats.departmentDistribution.find(
         (dept: any) => dept.name === `${testPrefix}-IT-Stats`
       );
       
@@ -375,7 +375,7 @@ describe("Staff Stats API (App Router handler)", () => {
       });
 
       // Verificar contadores de departamentos
-      json.stats.departments.forEach((dept: any) => {
+      json.stats.departmentDistribution.forEach((dept: any) => {
         expect(typeof dept.count).toBe('number');
         expect(dept.count).toBeGreaterThanOrEqual(0);
       });

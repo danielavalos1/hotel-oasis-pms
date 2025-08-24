@@ -316,13 +316,16 @@ describe("Staff API (App Router handler)", () => {
         expires: "2024-12-31T23:59:59.999Z"
       });
 
+      console.log(`[TEST] Making DELETE request for staff ID: ${testStaffId}`);
       const req = createMockRequest(`http://localhost:3000/api/staff/${testStaffId}`, "DELETE");
       const res = await DELETE(req, { params: { id: String(testStaffId) } });
       
+      console.log(`[TEST] DELETE response status: ${res.status}`);
       expect(res.status).toBe(200);
       const json = await res.json();
       expect(json.id).toBe(testStaffId);
       expect(json.passwordHash).toBeUndefined(); // Debe estar oculto
+      console.log(`[TEST] DELETE test completed successfully for staff ID: ${testStaffId}`);
     });
 
     it("DELETE sin autenticación responde 401", async () => {
@@ -343,6 +346,13 @@ describe("Staff API (App Router handler)", () => {
       // Crear un staff member específico para este test
       const testStaffId = await createTestStaff("delete-403");
       
+      // Verificar que el staff member existe antes de intentar eliminarlo
+      const existingStaff = await prisma.user.findUnique({
+        where: { id: testStaffId }
+      });
+      expect(existingStaff).toBeTruthy();
+      console.log(`[TEST] Verified staff exists before delete-403 test: ${existingStaff?.id} - ${existingStaff?.email}`);
+      
       mockGetServerSession.mockResolvedValue({
         user: { id: "2", role: "RECEPTIONIST" },
         expires: "2024-12-31T23:59:59.999Z"
@@ -354,6 +364,13 @@ describe("Staff API (App Router handler)", () => {
       expect(res.status).toBe(403);
       const json = await res.json();
       expect(json.error).toBe("Forbidden");
+      
+      // Verificar que el usuario aún existe (no debería haberse eliminado)
+      const stillExists = await prisma.user.findUnique({
+        where: { id: testStaffId }
+      });
+      expect(stillExists).toBeTruthy();
+      console.log(`[TEST] Verified staff still exists after delete-403 test: ${stillExists?.id}`);
     });
 
     it("DELETE con ID inválido responde 400", async () => {
@@ -371,14 +388,21 @@ describe("Staff API (App Router handler)", () => {
     });
 
     it("DELETE con staff inexistente responde 404", async () => {
+      const nonExistentId = 999999;
+      console.log(`[TEST] Testing DELETE with non-existent ID: ${nonExistentId}`);
+      
       mockGetServerSession.mockResolvedValue({
         user: { id: "1", role: "ADMIN" },
         expires: "2024-12-31T23:59:59.999Z"
       });
 
-      const req = createMockRequest(`http://localhost:3000/api/staff/999999`, "DELETE");
-      const res = await DELETE(req, { params: { id: "999999" } });
+      const req = createMockRequest(`http://localhost:3000/api/staff/${nonExistentId}`, "DELETE");
+      console.log(`[TEST] Request URL: http://localhost:3000/api/staff/${nonExistentId}`);
+      console.log(`[TEST] Request params: { id: "${nonExistentId}" }`);
       
+      const res = await DELETE(req, { params: { id: String(nonExistentId) } });
+      
+      console.log(`[TEST] Response status: ${res.status}`);
       expect(res.status).toBe(404);
       const json = await res.json();
       expect(json.error).toBe("Staff not found");

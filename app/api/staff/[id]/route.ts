@@ -103,6 +103,8 @@ export async function DELETE(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  let staffId: number;
+  
   try {
     // Check authentication and authorization
     const session = await getServerSession(authOptions);
@@ -118,13 +120,15 @@ export async function DELETE(
     }
     
     // Parse staff ID
-    const staffId = parseInt(params.id);
+    staffId = parseInt(params.id);
+    console.log(`[API][DELETE] Received staff ID: ${params.id}, parsed as: ${staffId}`);
     
     if (isNaN(staffId)) {
       return NextResponse.json({ error: 'Invalid staff ID' }, { status: 400 });
     }
     
     // Instead of deleting, we change the status to TERMINATED
+    console.log(`[API][DELETE] Attempting to terminate staff with ID: ${staffId}`);
     const terminatedStaff = await staffService.changeStaffStatus(staffId, 'TERMINATED');
     
     // Remove sensitive information
@@ -132,11 +136,14 @@ export async function DELETE(
     
     return NextResponse.json(staffData);
   } catch (error: any) {
-    console.error('Error terminating staff:', error);
-    
+    // Don't log P2025 errors as they are expected for non-existent staff
     if (error.code === 'P2025') {
+      console.log(`[API][DELETE] Staff with ID ${params.id} not found (expected for 404 test)`);
       return NextResponse.json({ error: 'Staff not found' }, { status: 404 });
     }
+    
+    // Log unexpected errors
+    console.error('Error terminating staff:', error);
     
     return NextResponse.json(
       { error: 'Internal Server Error' }, 

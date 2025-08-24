@@ -381,12 +381,28 @@ describe("Staff Schedules API (App Router handler)", () => {
         expires: "2024-12-31T23:59:59.999Z"
       });
 
+      // Verificar una vez más justo antes de la llamada DELETE
+      const doubleCheck = await prisma.schedule.findUnique({
+        where: { id: testScheduleId }
+      });
+      expect(doubleCheck).toBeTruthy();
+      console.log(`[TEST] Double-checked schedule exists: ${doubleCheck?.id}`);
+
+      console.log(`[TEST] Making DELETE request for schedule ID: ${testScheduleId}`);
       const req = createMockRequest(`http://localhost:3000/api/staff/schedules/${testScheduleId}`, "DELETE");
       const res = await DELETE(req, { params: { id: String(testScheduleId) } });
       
+      console.log(`[TEST] DELETE response status: ${res.status}`);
       expect(res.status).toBe(200);
       const json = await res.json();
       expect(json.message).toBe("Schedule deleted successfully");
+      
+      // Verificar que el schedule ya no existe
+      const deletedSchedule = await prisma.schedule.findUnique({
+        where: { id: testScheduleId }
+      });
+      expect(deletedSchedule).toBeNull();
+      console.log(`[TEST] Verified schedule was deleted: ${testScheduleId}`);
     });
 
     it("DELETE sin autenticación responde 401", async () => {

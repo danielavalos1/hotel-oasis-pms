@@ -88,11 +88,14 @@ export async function PUT(
     
     return NextResponse.json(updatedSchedule);
   } catch (error: any) {
-    console.error('Error updating schedule:', error);
-    
+    // Don't log P2025 errors as they are expected for non-existent schedules
     if (error.code === 'P2025') {
+      console.log(`[API][PUT] Schedule with ID ${params.id} not found (expected for 404 test)`);
       return NextResponse.json({ error: 'Schedule not found' }, { status: 404 });
     }
+    
+    // Log unexpected errors
+    console.error('Error updating schedule:', error);
     
     return NextResponse.json(
       { error: 'Internal Server Error' }, 
@@ -132,11 +135,14 @@ export async function DELETE(
     
     return NextResponse.json({ message: 'Schedule deleted successfully' });
   } catch (error: any) {
-    console.error('Error deleting schedule:', error);
-    
+    // Don't log P2025 errors as they are expected for non-existent schedules
     if (error.code === 'P2025') {
+      console.log(`[API][DELETE] Schedule with ID ${params.id} not found (expected for 404 test)`);
       return NextResponse.json({ error: 'Schedule not found' }, { status: 404 });
     }
+    
+    // Log unexpected errors
+    console.error('Error deleting schedule:', error);
     
     return NextResponse.json(
       { error: 'Internal Server Error' }, 

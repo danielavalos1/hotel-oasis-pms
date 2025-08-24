@@ -142,7 +142,7 @@ export async function GET() {
       ...basicStats,
       attendance: attendanceStats,
       employeeStatus: employeeStatusStats,
-      departments: departmentStats
+      departmentDistribution: departmentStats  // Changed from 'departments' to 'departmentDistribution'
     };
 
     // Devolver estadísticas en un objeto
