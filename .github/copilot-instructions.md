@@ -7,6 +7,20 @@
 - Tailwind CSS v3.4.17 y Radix UI en `components/ui` para estilo y accesibilidad.
 - Cypress para testing E2E y Component Testing.
 - Jest para testing unitario de funciones puras y servicios.
+- **pdf-node** para generación de reportes PDF desde plantillas HTML.
+
+## Generación de reportes PDF
+- **Dependencia**: `pdf-node` para convertir HTML a PDF con soporte para CSS y JavaScript.
+- **Ubicación**: `lib/reports/` - Lógica centralizada para generación de PDFs.
+- **Estructura de reportes**:
+  - `lib/reports/generators/` - Funciones específicas para cada tipo de reporte
+  - `lib/reports/templates/` - Plantillas HTML/CSS para los PDFs
+  - `lib/reports/utils/` - Utilidades comunes (formateo, configuración)
+  - `lib/reports/types.ts` - Tipos TypeScript para configuración de reportes
+  - `lib/reports/index.ts` - Barrel exports
+- **API Routes**: `app/api/reports/` - Endpoints para solicitar y descargar PDFs.
+- **Tipos de reportes**: Reservas, huéspedes, habitaciones, personal, finanzas.
+- **Configuración**: Opciones de formato (A4, carta), orientación, márgenes, headers/footers.
 
 ## Estructura clave - Organización modular
 La aplicación está organizada por **módulos funcionales** para facilitar la reutilización y mantenimiento:
@@ -27,17 +41,20 @@ La aplicación está organizada por **módulos funcionales** para facilitar la r
   - `components/staff/`: Sistema de personal
   - `components/dashboard/`: Componentes del dashboard
   - `components/auth/`: Componentes de autenticación
+  - `components/reports/`: Componentes para visualización y descarga de reportes
 
 - `hooks/[modulo]/`: Hooks especializados por módulo
   - `hooks/rooms/`: Lógica de estado para habitaciones
   - `hooks/bookings/`: Lógica de estado para reservas
   - `hooks/staff/`: Lógica de estado para personal
+  - `hooks/reports/`: Hooks para generación y gestión de reportes
   - Cada módulo incluye: data fetching, filtros, agrupación, actualizaciones
 
 - `lib/[modulo]/`: Funciones utilitarias puras por módulo
   - `lib/rooms/`: Utilidades de habitaciones (filtros, sorting, validaciones)
   - `lib/bookings/`: Utilidades de reservas
   - `lib/staff/`: Utilidades de personal
+  - `lib/reports/`: Generación de PDFs, plantillas HTML, formateo de datos
   - Cada módulo incluye `index.ts` para barrel exports
 
 ### Organización de tests
@@ -119,6 +136,25 @@ lib/rooms/
   ├── room-sorting.ts       # Funciones de ordenamiento
   ├── room-utils.ts         # Utilidades generales
   └── index.ts              # Barrel exports
+
+lib/reports/
+  ├── generators/
+  │   ├── booking-reports.ts    # Reportes de reservas
+  │   ├── guest-reports.ts      # Reportes de huéspedes
+  │   ├── room-reports.ts       # Reportes de habitaciones
+  │   ├── staff-reports.ts      # Reportes de personal
+  │   └── financial-reports.ts  # Reportes financieros
+  ├── templates/
+  │   ├── booking-template.html # Plantilla HTML para reservas
+  │   ├── guest-template.html   # Plantilla HTML para huéspedes
+  │   ├── room-template.html    # Plantilla HTML para habitaciones
+  │   └── base-styles.css       # Estilos CSS comunes
+  ├── utils/
+  │   ├── pdf-config.ts         # Configuración de pdf-node
+  │   ├── formatters.ts         # Funciones de formateo
+  │   └── report-helpers.ts     # Utilidades específicas
+  ├── types.ts                  # Tipos para reportes
+  └── index.ts                  # Barrel exports
 
 cypress/e2e/
   ├── rooms/
