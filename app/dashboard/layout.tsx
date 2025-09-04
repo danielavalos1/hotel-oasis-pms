@@ -16,6 +16,7 @@ import {
   Menu,
   ChevronLeft,
   ChevronRight,
+  FileText,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -160,6 +161,11 @@ export default function DashboardLayout({
       href: "/dashboard/staff",
       label: "Staff",
       icon: <Users className="h-4 w-4" />,
+    },
+    {
+      href: "/dashboard/reports",
+      label: "Reportes",
+      icon: <FileText className="h-4 w-4" />,
     },
   ];
 

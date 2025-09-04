@@ -1,4 +1,4 @@
-// schema.prisma
+// schema.prisma - Esquema combinado con soporte completo para reportes financieros
 
 datasource db {
   provider = "postgresql"
@@ -9,31 +9,37 @@ generator client {
   provider = "prisma-client-js"
 }
 
-model Guest {
-  id          Int       @id @default(autoincrement())
-  firstName   String
-  lastName    String
-  email       String    @unique
-  phoneNumber String
-  address     String?
-  bookings    Booking[]
+// ========== ENUMS ==========
+
+// Nuevos enums para reportes financieros
+enum PaymentType {
+  CASH
+  CARD
+  TRANSFER
+  CHECK
+  OTHER
 }
 
-model Room {
-  id              Int               @id @default(autoincrement())
-  roomNumber      String            @unique
-  type            RoomType          @default(SENCILLA)
-  capacity        Int               @default(2)
-  pricePerNight   Decimal           @db.Decimal(10, 2)
-  description     String?
-  amenities       String[]          @default([])
-  isAvailable     Boolean           @default(true)
-  bookingRooms    BookingRoom[] // Cambiado de bookings a bookingRooms
-  roomInventory   RoomInventory?
-  channelRates    ChannelRate[]
-  status          RoomStatus        @default(LIBRE)
-  floor           Int               @default(1) // Nuevo campo para piso
-  BookingMovement BookingMovement[]
+enum Currency {
+  MXN
+  USD
+  EUR
+}
+
+// Enum expandido para tipos de movimiento con más granularidad
+enum MovementType {
+  PAYMENT
+  EXTENSION
+  CANCELLATION
+  EXTRA_CHARGE
+  REFUND
+  OTHER
+  // Nuevos tipos específicos para reportes
+  LODGING_PAYMENT    // Pago por hospedaje
+  CASH_PAYMENT       // Pago en efectivo
+  CARD_PAYMENT       // Pago con tarjeta
+  SERVICE_CHARGE     // Cargo por servicios
+  DISCOUNT           // Descuentos aplicados
 }
 
 enum RoomType {
@@ -55,6 +61,67 @@ enum RoomStatus {
   LIMPIEZA
 }
 
+enum UserRole {
+  ADMIN
+  RECEPTIONIST
+  HOUSEKEEPER
+  SUPERADMIN
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+  ON_LEAVE
+  TERMINATED
+  SUSPENDED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  HALF_DAY
+  ON_LEAVE
+}
+
+enum BookingEventType {
+  CHECKIN
+  CHECKOUT
+  EXTENSION
+  NO_SHOW
+  EARLY_CHECKOUT
+  OTHER
+}
+
+// ========== MODELOS PRINCIPALES ==========
+
+model Guest {
+  id          Int       @id @default(autoincrement())
+  firstName   String
+  lastName    String
+  email       String    @unique
+  phoneNumber String
+  address     String?
+  bookings    Booking[]
+}
+
+model Room {
+  id              Int               @id @default(autoincrement())
+  roomNumber      String            @unique
+  type            RoomType          @default(SENCILLA)
+  capacity        Int               @default(2)
+  pricePerNight   Decimal           @db.Decimal(10, 2)
+  description     String?
+  amenities       String[]          @default([])
+  isAvailable     Boolean           @default(true)
+  bookingRooms    BookingRoom[]
+  roomInventory   RoomInventory?
+  channelRates    ChannelRate[]
+  status          RoomStatus        @default(LIBRE)
+  floor           Int               @default(1)
+  BookingMovement BookingMovement[]
+}
+
 model Booking {
   id              Int                   @id @default(autoincrement())
   guestId         Int
@@ -71,21 +138,33 @@ model Booking {
   BookingEvent    BookingEvent[]
 }
 
+// Modelo Payment actualizado con campos para reportes financieros
 model Payment {
-  id            Int      @id @default(autoincrement())
+  id            Int         @id @default(autoincrement())
   bookingId     Int
-  amount        Decimal  @db.Decimal(10, 2)
-  paymentDate   DateTime @db.Date
+  amount        Decimal     @db.Decimal(10, 2)
+  paymentDate   DateTime    @db.Date
   paymentMethod String
-  booking       Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  
+  // Nuevos campos para reportes y auditoría
+  turnoId       Int?        // Turno en que se registró el pago
+  userId        Int?        // Usuario que registró el pago
+  currency      Currency    @default(MXN)
+  paymentType   PaymentType @default(CASH)
+  description   String?     // Descripción del pago
+  reference     String?     // Referencia o folio
+  
+  // Campos de auditoría
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  
+  // Relaciones
+  booking       Booking     @relation(fields: [bookingId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  turno         Turno?      @relation(fields: [turnoId], references: [numero])
+  user          User?       @relation(fields: [userId], references: [id])
 }
 
-enum UserRole {
-  ADMIN
-  RECEPTIONIST
-  HOUSEKEEPER
-  SUPERADMIN
-}
+// ========== MODELOS DE USUARIO Y STAFF ==========
 
 model User {
   id              Int                @id @default(autoincrement())
@@ -99,20 +178,17 @@ model User {
   position        String?
   hireDate        DateTime?          @db.Date
   status          EmployeeStatus     @default(ACTIVE)
+  
+  // Relaciones existentes
   department      Department?        @relation(fields: [departmentId], references: [id])
   attendance      Attendance[]
   schedules       Schedule[]
   documents       EmployeeDocument[]
   BookingMovement BookingMovement[]
   BookingEvent    BookingEvent[]
-}
-
-enum EmployeeStatus {
-  ACTIVE
-  INACTIVE
-  ON_LEAVE
-  TERMINATED
-  SUSPENDED
+  
+  // Nuevas relaciones para reportes
+  payments        Payment[]          // Pagos registrados por el usuario
 }
 
 model Department {
@@ -131,14 +207,6 @@ model Attendance {
   status       AttendanceStatus
   notes        String?
   user         User             @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-}
-
-enum AttendanceStatus {
-  PRESENT
-  ABSENT
-  LATE
-  HALF_DAY
-  ON_LEAVE
 }
 
 model Schedule {
@@ -161,6 +229,8 @@ model EmployeeDocument {
   expiryDate   DateTime?
   user         User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 }
+
+// ========== MODELOS DE INVENTARIO Y CANALES ==========
 
 model RoomInventory {
   id                  Int       @id @default(autoincrement())
@@ -208,7 +278,9 @@ model BookingModification {
   booking             Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 }
 
-// Nuevo modelo para manejar la relación muchos a muchos entre Booking y Room
+// ========== MODELOS DE RELACIONES ==========
+
+// Modelo para manejar la relación muchos a muchos entre Booking y Room
 model BookingRoom {
   id          Int     @id @default(autoincrement())
   bookingId   Int
@@ -220,35 +292,34 @@ model BookingRoom {
   @@unique([bookingId, roomId]) // Asegura que no haya duplicados
 }
 
-// --- Movimientos y eventos de reservas ---
+// ========== MOVIMIENTOS Y EVENTOS DE RESERVAS ==========
+
+// Modelo BookingMovement actualizado con campos para reportes financieros
 model BookingMovement {
   id        Int          @id @default(autoincrement())
   bookingId Int
-  roomId    Int? // Para asociar el movimiento a una habitación específica si aplica
+  roomId    Int?         // Para asociar el movimiento a una habitación específica si aplica
   type      MovementType
   amount    Decimal?     @db.Decimal(10, 2)
   subtotal  Decimal?     @db.Decimal(10, 2) // Para reportes
   iva       Decimal?     @db.Decimal(10, 2) // IVA calculado
   tax3      Decimal?     @db.Decimal(10, 2) // Impuesto 3%
   total     Decimal?     @db.Decimal(10, 2) // Total con impuestos
-  reference String? // Referencia o folio
-  concept   String? // Descripción del concepto
+  reference String?      // Referencia o folio
+  concept   String?      // Descripción del concepto
   createdAt DateTime     @default(now())
-  turnoId   Int? // Turno en el que se registró
-  userId    Int? // Usuario que registró el movimiento
+  
+  // Nuevos campos obligatorios para reportes
+  turnoId   Int?         // Turno en el que se registró el movimiento
+  userId    Int?         // Usuario que registró el movimiento (usuario logueado)
+  currency  Currency     @default(MXN) // Moneda con la que se pagó
+  paymentType PaymentType? // Tipo de pago cuando aplique
+  
+  // Relaciones
   booking   Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   room      Room?        @relation(fields: [roomId], references: [id])
-  turno     Turno?       @relation(fields: [turnoId], references: [id])
+  turno     Turno?       @relation(fields: [turnoId], references: [numero])
   user      User?        @relation(fields: [userId], references: [id])
-}
-
-enum MovementType {
-  PAYMENT
-  EXTENSION
-  CANCELLATION
-  EXTRA_CHARGE
-  REFUND
-  OTHER
 }
 
 model BookingEvent {
@@ -262,21 +333,21 @@ model BookingEvent {
   user      User?            @relation(fields: [userId], references: [id])
 }
 
-enum BookingEventType {
-  CHECKIN
-  CHECKOUT
-  EXTENSION
-  NO_SHOW
-  EARLY_CHECKOUT
-  OTHER
-}
+// ========== TURNOS PARA REPORTES ==========
 
-// --- Turnos para reporte de conceptos ---
+// Modelo Turno actualizado con relaciones para reportes financieros
 model Turno {
-  id          Int               @id @default(autoincrement())
-  numero      Int // 1, 2, 3
-  nombre      String // Ej: "Turno Matutino"
-  inicio      DateTime // Hora de inicio del turno
-  fin         DateTime // Hora de fin del turno
-  movimientos BookingMovement[]
+  numero      Int               @id // 1, 2, 3
+  nombre      String            // Ej: "Turno Matutino"
+  inicio      DateTime          // Hora de inicio del turno
+  fin         DateTime          // Hora de fin del turno
+  descripcion String?           // Descripción adicional del turno
+  activo      Boolean           @default(true) // Si el turno está activo
+  
+  // Relaciones para reportes
+  movimientos BookingMovement[] // Movimientos registrados en este turno
+  payments    Payment[]         // Pagos registrados en este turno
+  
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
 }

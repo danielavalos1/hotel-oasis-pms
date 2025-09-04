@@ -1,0 +1,303 @@
+
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Reporte de Conceptos por Turnos</title>
+      <style>
+        body {
+          font-family: 'Helvetica', Arial, sans-serif;
+          margin: 0;
+          padding: 20px;
+          color: #333;
+          line-height: 1.4;
+        }
+        
+        .header {
+          text-align: center;
+          margin-bottom: 30px;
+          border-bottom: 2px solid #2563eb;
+          padding-bottom: 20px;
+        }
+        
+        .hotel-name {
+          font-size: 24px;
+          font-weight: bold;
+          color: #1e40af;
+          margin-bottom: 5px;
+        }
+        
+        .hotel-info {
+          font-size: 12px;
+          color: #666;
+          margin-bottom: 10px;
+        }
+        
+        .report-title {
+          font-size: 20px;
+          font-weight: bold;
+          margin: 15px 0 5px 0;
+        }
+        
+        .report-period {
+          font-size: 14px;
+          color: #666;
+        }
+        
+        .metadata {
+          text-align: left;
+          margin: 20px 0;
+          font-size: 12px;
+          color: #666;
+        }
+        
+        .metadata div {
+          margin-bottom: 3px;
+        }
+        
+        .turn-section {
+          margin-bottom: 30px;
+          page-break-inside: avoid;
+        }
+        
+        .turn-header {
+          background-color: #f3f4f6;
+          padding: 10px;
+          border-left: 4px solid #2563eb;
+          margin-bottom: 15px;
+        }
+        
+        .turn-title {
+          font-size: 16px;
+          font-weight: bold;
+          color: #1e40af;
+        }
+        
+        .turn-info {
+          font-size: 12px;
+          color: #666;
+          margin-top: 5px;
+        }
+        
+        .concepts-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 20px;
+          font-size: 11px;
+        }
+        
+        .concepts-table th {
+          background-color: #e5e7eb;
+          padding: 8px;
+          text-align: left;
+          border: 1px solid #d1d5db;
+          font-weight: bold;
+          color: #374151;
+        }
+        
+        .concepts-table td {
+          padding: 6px 8px;
+          border: 1px solid #d1d5db;
+        }
+        
+        .concepts-table tr:nth-child(even) {
+          background-color: #f9fafb;
+        }
+        
+        .amount {
+          text-align: right;
+          font-weight: bold;
+        }
+        
+        .positive {
+          color: #059669;
+        }
+        
+        .negative {
+          color: #dc2626;
+        }
+        
+        .no-data {
+          text-align: center;
+          color: #666;
+          font-style: italic;
+          padding: 20px;
+        }
+        
+        .summary-section {
+          margin-top: 30px;
+          padding: 15px;
+          background-color: #f0f9ff;
+          border: 1px solid #bae6fd;
+          border-radius: 5px;
+        }
+        
+        .summary-title {
+          font-size: 16px;
+          font-weight: bold;
+          color: #0369a1;
+          margin-bottom: 10px;
+        }
+        
+        .summary-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 10px;
+        }
+        
+        .summary-item {
+          font-size: 12px;
+        }
+        
+        .summary-label {
+          font-weight: bold;
+          color: #374151;
+        }
+        
+        .page-break {
+          page-break-before: always;
+        }
+        
+        @media print {
+          body {
+            margin: 0;
+            padding: 15px;
+          }
+          
+          .turn-section {
+            page-break-inside: avoid;
+          }
+          
+          .concepts-table {
+            font-size: 10px;
+          }
+        }
+      </style>
+    </head>
+    <body>
+      <!-- Encabezado -->
+      <div class="header">
+        <div class="hotel-name">Hotel Oasis PMS - Prueba</div>
+        <div class="hotel-info">Calle Ficticia 123, Ciudad Test</div>
+        <div class="hotel-info">Tel: +52 123 456 7890 • Email: test@hoteloasis.com • Web: www.hoteloasis.com</div>
+        <div class="report-title">Reporte de Conceptos por Turnos</div>
+        <div class="report-period">Período: 31/12/2023 - 1/1/2024</div>
+      </div>
+      
+      <!-- Metadatos -->
+      <div class="metadata">
+        <div>Generado por: Usuario Test</div>
+        <div>Fecha de generación: 1/9/2025, 18:05:11</div>
+        <div>Total de turnos: 2</div>
+        <div>Total de registros: 2</div>
+      </div>
+      
+      <!-- Secciones por turno -->
+      
+    
+    <div class="turn-section">
+      <div class="turn-header">
+        <div class="turn-title">Turno Matutino</div>
+        <div class="turn-info">
+          Total de movimientos: 1 • 
+          Total de registros: 5
+        </div>
+      </div>
+      
+      
+    <table class="concepts-table">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Concepto</th>
+          <th>Referencia</th>
+          <th>Tipo</th>
+          <th>Monto</th>
+          <th>Moneda</th>
+        </tr>
+      </thead>
+      <tbody>
+        
+          <tr>
+            <td>1/1/2024</td>
+            <td>Pago de hospedaje</td>
+            <td>REF001</td>
+            <td>CHECKIN_PAYMENT</td>
+            <td class="amount positive">
+              2500,00 MXN
+            </td>
+            <td>MXN</td>
+          </tr>
+        
+      </tbody>
+    </table>
+  
+    </div>
+  
+    <div class="page-break"></div>
+    <div class="turn-section">
+      <div class="turn-header">
+        <div class="turn-title">Turno Vespertino</div>
+        <div class="turn-info">
+          Total de movimientos: 1 • 
+          Total de registros: 8
+        </div>
+      </div>
+      
+      
+    <table class="concepts-table">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Concepto</th>
+          <th>Referencia</th>
+          <th>Tipo</th>
+          <th>Monto</th>
+          <th>Moneda</th>
+        </tr>
+      </thead>
+      <tbody>
+        
+          <tr>
+            <td>1/1/2024</td>
+            <td>Servicio a habitación</td>
+            <td>REF002</td>
+            <td>ROOM_SERVICE</td>
+            <td class="amount positive">
+              500,00 MXN
+            </td>
+            <td>MXN</td>
+          </tr>
+        
+      </tbody>
+    </table>
+  
+    </div>
+  
+      
+      <!-- Resumen -->
+      
+    <div class="summary-section">
+      <div class="summary-title">Resumen por Turnos</div>
+      <div class="summary-grid">
+        
+            <div class="summary-item">
+              <div class="summary-label">Turno: Turno Matutino</div>
+              <div>Movimientos: 5</div>
+              <div>Total: 3500,00 MXN</div>
+            </div>
+          
+            <div class="summary-item">
+              <div class="summary-label">Turno: Turno Vespertino</div>
+              <div>Movimientos: 8</div>
+              <div>Total: 5500,00 MXN</div>
+            </div>
+          
+      </div>
+    </div>
+  
+      
+    </body>
+    </html>
+  
