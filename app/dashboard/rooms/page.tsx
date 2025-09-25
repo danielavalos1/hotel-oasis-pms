@@ -15,7 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { NewRoomForm } from "./new-room-form";
+import { NewRoomForm } from "./new-room-form-enhanced";
 import {
   Select,
   SelectContent,
@@ -23,6 +23,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useAuth } from "@/context/auth-context";
+import { AdminOnlyMessage } from "@/components/ui/admin-only-message";
 
 export default function RoomsPage() {
   const [activeTab, setActiveTab] = useState("list");
@@ -30,26 +32,41 @@ export default function RoomsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [floorFilter, setFloorFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
+  
+  const { session } = useAuth();
+  const isAdmin = session?.user?.role === "ADMIN" || session?.user?.role === "SUPERADMIN";
 
   return (
     <div className="w-full max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 py-4">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
-        <h2 className="text-3xl font-bold tracking-tight">Habitaciones</h2>
-        <Dialog open={isNewRoomOpen} onOpenChange={setIsNewRoomOpen}>
-          <DialogTrigger asChild>
-            <Button className="inline-flex items-center w-full sm:w-auto">
-              <Plus className="mr-2 h-4 w-4" />
-              Nueva Habitación
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>Añadir Nueva Habitación</DialogTitle>
-            </DialogHeader>
-            <NewRoomForm onSuccess={() => setIsNewRoomOpen(false)} />
-          </DialogContent>
-        </Dialog>
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Habitaciones</h2>
+        </div>
+        
+        {isAdmin && (
+          <Dialog open={isNewRoomOpen} onOpenChange={setIsNewRoomOpen}>
+            <DialogTrigger asChild>
+              <Button className="inline-flex items-center w-full sm:w-auto">
+                <Plus className="mr-2 h-4 w-4" />
+                Nueva Habitación
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Añadir Nueva Habitación</DialogTitle>
+              </DialogHeader>
+              <NewRoomForm onSuccess={() => setIsNewRoomOpen(false)} />
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
+
+      {!isAdmin && (
+        <AdminOnlyMessage 
+          feature="La gestión de habitaciones (crear, editar, eliminar)" 
+          className="mb-6"
+        />
+      )}
 
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 mb-4 w-full">
         <div className="relative flex-1 min-w-0 max-w-full sm:max-w-sm">

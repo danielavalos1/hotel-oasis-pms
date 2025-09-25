@@ -7,6 +7,9 @@ datasource db {
 
 generator client {
   provider = "prisma-client-js"
+  // Configurar para usar tipos nativos de JavaScript
+  // Esto convierte automáticamente Decimal a number y DateTime a Date
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 // ========== ENUMS ==========
@@ -35,11 +38,11 @@ enum MovementType {
   REFUND
   OTHER
   // Nuevos tipos específicos para reportes
-  LODGING_PAYMENT    // Pago por hospedaje
-  CASH_PAYMENT       // Pago en efectivo
-  CARD_PAYMENT       // Pago con tarjeta
-  SERVICE_CHARGE     // Cargo por servicios
-  DISCOUNT           // Descuentos aplicados
+  LODGING_PAYMENT // Pago por hospedaje
+  CASH_PAYMENT // Pago en efectivo
+  CARD_PAYMENT // Pago con tarjeta
+  SERVICE_CHARGE // Cargo por servicios
+  DISCOUNT // Descuentos aplicados
 }
 
 enum RoomType {
@@ -93,6 +96,27 @@ enum BookingEventType {
   OTHER
 }
 
+// Nuevos enums para sistema de rates y descuentos
+enum RateType {
+  BASE // Tarifa base
+  SEASONAL // Tarifa de temporada
+  WEEKEND // Tarifa de fin de semana
+  SPECIAL // Tarifa especial
+}
+
+enum DiscountType {
+  PERCENTAGE // Descuento porcentual
+  FIXED_AMOUNT // Descuento cantidad fija
+}
+
+enum DiscountReason {
+  CORPORATE // Convenio corporativo
+  LOYALTY // Cliente frecuente
+  FRIEND // Amigo de dueños
+  PROMOTIONAL // Promoción especial
+  OTHER // Otro motivo
+}
+
 // ========== MODELOS PRINCIPALES ==========
 
 model Guest {
@@ -110,7 +134,6 @@ model Room {
   roomNumber      String            @unique
   type            RoomType          @default(SENCILLA)
   capacity        Int               @default(2)
-  pricePerNight   Decimal           @db.Decimal(10, 2)
   description     String?
   amenities       String[]          @default([])
   isAvailable     Boolean           @default(true)
@@ -120,14 +143,132 @@ model Room {
   status          RoomStatus        @default(LIBRE)
   floor           Int               @default(1)
   BookingMovement BookingMovement[]
+
+  // Nuevas relaciones para rates
+  roomRates RoomRate[] // Tarifas configuradas para esta habitación
+}
+
+// Modelo para definir descuentos disponibles en el sistema
+model Discount {
+  id          Int     @id @default(autoincrement())
+  name        String // Ej: "Descuento Corporativo", "VIP 15%"
+  description String?
+
+  // Configuración del descuento
+  type  DiscountType // PERCENTAGE o FIXED_AMOUNT
+  value Decimal      @db.Decimal(10, 2) // 15.00 para 15% o 100.00 para $100 MXN
+
+  // Restricciones
+  minAmount Decimal? @db.Decimal(10, 2) // Monto mínimo para aplicar
+  maxAmount Decimal? @db.Decimal(10, 2) // Descuento máximo permitido
+
+  // Control de uso
+  isActive         Boolean @default(true)
+  requiresApproval Boolean @default(false) // Si requiere aprobación de supervisor
+
+  // Fechas de validez
+  validFrom  DateTime?
+  validUntil DateTime?
+
+  // Roles que pueden aplicar este descuento
+  allowedRoles String[] // ["RECEPTIONIST", "ADMIN", "SUPERVISOR"]
+
+  // Metadatos
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String // Usuario que creó el descuento
+
+  // Relaciones
+  appliedDiscounts BookingDiscount[]
+}
+
+// Modelo para definir tarifas de habitaciones
+model RoomRate {
+  id     Int @id @default(autoincrement())
+  roomId Int
+
+  // Información de la tarifa
+  name String // Ej: "Tarifa Base", "Temporada Alta", "Fin de Semana"
+  type RateType // BASE, SEASONAL, WEEKEND, SPECIAL
+
+  // Precios detallados
+  basePrice      Decimal @db.Decimal(10, 2) // Precio base sin impuestos (ej: 750.00)
+  taxRate        Decimal @default(0.16) @db.Decimal(5, 4) // Tasa de IVA (16% = 0.1600)
+  serviceFeeRate Decimal @default(0.03) @db.Decimal(5, 4) // Tasa de servicio (3% = 0.0300)
+
+  // Campos calculados/cache para rendimiento
+  subtotal         Decimal @db.Decimal(10, 2) // basePrice (750.00)
+  taxAmount        Decimal @db.Decimal(10, 2) // basePrice * taxRate (120.00)
+  serviceFeeAmount Decimal @db.Decimal(10, 2) // basePrice * serviceFeeRate (22.50)
+  totalPrice       Decimal @db.Decimal(10, 2) // subtotal + taxAmount + serviceFeeAmount (892.50)
+
+  // Configuración de validez
+  isActive  Boolean @default(true)
+  isDefault Boolean @default(false) // Solo una tarifa puede ser default por habitación
+
+  // Fechas de validez (opcional para tarifas estacionales)
+  validFrom  DateTime?
+  validUntil DateTime?
+
+  // Días de la semana aplicables (para tarifas de fin de semana)
+  validDays String[] @default([]) // ["MONDAY", "TUESDAY", etc.]
+
+  // Restricciones de estancia mínima
+  minNights Int? // Estancia mínima en noches
+  maxNights Int? // Estancia máxima en noches
+
+  // Metadatos
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String // Usuario que creó la tarifa
+
+  // Relaciones
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, name]) // Nombres únicos por habitación
+  // Índices para rendimiento
+  @@index([roomId, isActive])
+  @@index([roomId, isDefault])
+}
+
+// Modelo para gestionar descuentos aplicados a reservas específicas
+model BookingDiscount {
+  id         Int      @id @default(autoincrement())
+  bookingId  Int
+  discountId Int
+  appliedBy  String // ID o nombre del usuario que aplicó el descuento
+  appliedAt  DateTime @default(now())
+
+  // Valores del descuento al momento de aplicación
+  discountAmount Decimal      @db.Decimal(10, 2)
+  discountType   DiscountType
+  discountValue  Decimal      @db.Decimal(10, 2) // Porcentaje o monto fijo
+
+  // Justificación del descuento
+  reason DiscountReason
+  notes  String? // Notas adicionales del recepcionista
+
+  // Relaciones
+  booking  Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  discount Discount @relation(fields: [discountId], references: [id])
+
+  @@unique([bookingId, discountId])
 }
 
 model Booking {
-  id              Int                   @id @default(autoincrement())
-  guestId         Int
-  checkInDate     DateTime              @db.Date
-  checkOutDate    DateTime              @db.Date
-  totalPrice      Decimal               @db.Decimal(10, 2)
+  id           Int      @id @default(autoincrement())
+  guestId      Int
+  checkInDate  DateTime @db.Date
+  checkOutDate DateTime @db.Date
+
+  // Nuevos campos para pricing detallado
+  baseAmount       Decimal? @db.Decimal(10, 2) // Precio base antes de impuestos
+  subtotal         Decimal? @db.Decimal(10, 2) // Subtotal antes de descuentos
+  discountAmount   Decimal  @default(0) @db.Decimal(10, 2) // Monto del descuento aplicado
+  taxAmount        Decimal? @db.Decimal(10, 2) // IVA (16%)
+  serviceFeeAmount Decimal? @db.Decimal(10, 2) // Impuesto de servicio (3%)
+  totalPrice       Decimal  @db.Decimal(10, 2) // Precio final después de descuentos e impuestos
+
   status          String
   guest           Guest                 @relation(fields: [guestId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   numberOfGuests  Int                   @default(1)
@@ -136,49 +277,52 @@ model Booking {
   modifications   BookingModification[]
   BookingMovement BookingMovement[]
   BookingEvent    BookingEvent[]
+
+  // Nuevas relaciones para descuentos
+  appliedDiscounts BookingDiscount[] // Descuentos aplicados a esta reserva
 }
 
 // Modelo Payment actualizado con campos para reportes financieros
 model Payment {
-  id            Int         @id @default(autoincrement())
+  id            Int      @id @default(autoincrement())
   bookingId     Int
-  amount        Decimal     @db.Decimal(10, 2)
-  paymentDate   DateTime    @db.Date
+  amount        Decimal  @db.Decimal(10, 2)
+  paymentDate   DateTime @db.Date
   paymentMethod String
-  
+
   // Nuevos campos para reportes y auditoría
-  turnoId       Int?        // Turno en que se registró el pago
-  userId        Int?        // Usuario que registró el pago
-  currency      Currency    @default(MXN)
-  paymentType   PaymentType @default(CASH)
-  description   String?     // Descripción del pago
-  reference     String?     // Referencia o folio
-  
+  turnoId     Int? // Turno en que se registró el pago
+  userId      Int? // Usuario que registró el pago
+  currency    Currency    @default(MXN)
+  paymentType PaymentType @default(CASH)
+  description String? // Descripción del pago
+  reference   String? // Referencia o folio
+
   // Campos de auditoría
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relaciones
-  booking       Booking     @relation(fields: [bookingId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  turno         Turno?      @relation(fields: [turnoId], references: [numero])
-  user          User?       @relation(fields: [userId], references: [id])
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  turno   Turno?  @relation(fields: [turnoId], references: [numero])
+  user    User?   @relation(fields: [userId], references: [id])
 }
 
 // ========== MODELOS DE USUARIO Y STAFF ==========
 
 model User {
-  id              Int                @id @default(autoincrement())
-  username        String             @unique
-  name            String
-  lastName        String?
-  passwordHash    String
-  email           String             @unique
-  role            UserRole           @default(RECEPTIONIST)
-  departmentId    Int?
-  position        String?
-  hireDate        DateTime?          @db.Date
-  status          EmployeeStatus     @default(ACTIVE)
-  
+  id           Int            @id @default(autoincrement())
+  username     String         @unique
+  name         String
+  lastName     String?
+  passwordHash String
+  email        String         @unique
+  role         UserRole       @default(RECEPTIONIST)
+  departmentId Int?
+  position     String?
+  hireDate     DateTime?      @db.Date
+  status       EmployeeStatus @default(ACTIVE)
+
   // Relaciones existentes
   department      Department?        @relation(fields: [departmentId], references: [id])
   attendance      Attendance[]
@@ -186,9 +330,9 @@ model User {
   documents       EmployeeDocument[]
   BookingMovement BookingMovement[]
   BookingEvent    BookingEvent[]
-  
+
   // Nuevas relaciones para reportes
-  payments        Payment[]          // Pagos registrados por el usuario
+  payments Payment[] // Pagos registrados por el usuario
 }
 
 model Department {
@@ -298,28 +442,28 @@ model BookingRoom {
 model BookingMovement {
   id        Int          @id @default(autoincrement())
   bookingId Int
-  roomId    Int?         // Para asociar el movimiento a una habitación específica si aplica
+  roomId    Int? // Para asociar el movimiento a una habitación específica si aplica
   type      MovementType
   amount    Decimal?     @db.Decimal(10, 2)
   subtotal  Decimal?     @db.Decimal(10, 2) // Para reportes
   iva       Decimal?     @db.Decimal(10, 2) // IVA calculado
   tax3      Decimal?     @db.Decimal(10, 2) // Impuesto 3%
   total     Decimal?     @db.Decimal(10, 2) // Total con impuestos
-  reference String?      // Referencia o folio
-  concept   String?      // Descripción del concepto
+  reference String? // Referencia o folio
+  concept   String? // Descripción del concepto
   createdAt DateTime     @default(now())
-  
+
   // Nuevos campos obligatorios para reportes
-  turnoId   Int?         // Turno en el que se registró el movimiento
-  userId    Int?         // Usuario que registró el movimiento (usuario logueado)
-  currency  Currency     @default(MXN) // Moneda con la que se pagó
+  turnoId     Int? // Turno en el que se registró el movimiento
+  userId      Int? // Usuario que registró el movimiento (usuario logueado)
+  currency    Currency     @default(MXN) // Moneda con la que se pagó
   paymentType PaymentType? // Tipo de pago cuando aplique
-  
+
   // Relaciones
-  booking   Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  room      Room?        @relation(fields: [roomId], references: [id])
-  turno     Turno?       @relation(fields: [turnoId], references: [numero])
-  user      User?        @relation(fields: [userId], references: [id])
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  room    Room?   @relation(fields: [roomId], references: [id])
+  turno   Turno?  @relation(fields: [turnoId], references: [numero])
+  user    User?   @relation(fields: [userId], references: [id])
 }
 
 model BookingEvent {
@@ -337,17 +481,17 @@ model BookingEvent {
 
 // Modelo Turno actualizado con relaciones para reportes financieros
 model Turno {
-  numero      Int               @id // 1, 2, 3
-  nombre      String            // Ej: "Turno Matutino"
-  inicio      DateTime          // Hora de inicio del turno
-  fin         DateTime          // Hora de fin del turno
-  descripcion String?           // Descripción adicional del turno
-  activo      Boolean           @default(true) // Si el turno está activo
-  
+  numero      Int      @id // 1, 2, 3
+  nombre      String // Ej: "Turno Matutino"
+  inicio      DateTime // Hora de inicio del turno
+  fin         DateTime // Hora de fin del turno
+  descripcion String? // Descripción adicional del turno
+  activo      Boolean  @default(true) // Si el turno está activo
+
   // Relaciones para reportes
   movimientos BookingMovement[] // Movimientos registrados en este turno
-  payments    Payment[]         // Pagos registrados en este turno
-  
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
+  payments    Payment[] // Pagos registrados en este turno
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

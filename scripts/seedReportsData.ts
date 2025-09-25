@@ -15,7 +15,17 @@ async function main() {
   // Obtener usuarios, turnos y habitaciones existentes
   const users = await prisma.user.findMany();
   const turnos = await prisma.turno.findMany();
-  const rooms = await prisma.room.findMany();
+  const rooms = await prisma.room.findMany({
+    include: {
+      roomRates: {
+        where: {
+          isActive: true,
+          type: 'BASE'
+        },
+        take: 1
+      }
+    }
+  });
 
   if (users.length === 0 || turnos.length === 0 || rooms.length === 0) {
     console.error("Error: Debe ejecutar primero el seedDatabase.ts");
@@ -144,6 +154,13 @@ async function main() {
 
   const createdBookings = [];
   for (const bookingData of bookingsData) {
+    // Calcular los campos de pricing
+    const totalPrice = bookingData.totalPrice;
+    const subtotal = totalPrice / 1.2; // Precio sin impuestos (IVA 16% + ISH 4%)
+    const taxAmount = subtotal * 0.16; // IVA 16%
+    const serviceFeeAmount = subtotal * 0.04; // ISH 4% (Impuesto Sobre Hospedaje)
+    const baseAmount = subtotal; // Precio base antes de impuestos
+
     // Crear la reserva
     const booking = await prisma.booking.create({
       data: {
@@ -152,7 +169,12 @@ async function main() {
         checkOutDate: bookingData.checkOutDate,
         status: bookingData.status,
         numberOfGuests: bookingData.numberOfGuests,
-        totalPrice: bookingData.totalPrice,
+        totalPrice: totalPrice,
+        baseAmount: baseAmount,
+        subtotal: subtotal,
+        taxAmount: taxAmount,
+        serviceFeeAmount: serviceFeeAmount,
+        discountAmount: 0, // Sin descuentos inicialmente
       },
     });
 
@@ -160,11 +182,12 @@ async function main() {
     for (const roomNumber of bookingData.roomNumbers) {
       const room = rooms.find(r => r.roomNumber === roomNumber);
       if (room) {
+        const baseRate = room.roomRates[0]?.basePrice || 1000; // Precio por defecto si no hay rate
         await prisma.bookingRoom.create({
           data: {
             bookingId: booking.id,
             roomId: room.id,
-            priceAtTime: room.pricePerNight,
+            priceAtTime: baseRate,
           },
         });
       }
@@ -204,9 +227,9 @@ async function main() {
     });
 
     // Crear movimiento principal de hospedaje
-    const subtotal = paymentAmount / 1.16; // Sin IVA
-    const iva = subtotal * 0.16;
-    const tax3 = subtotal * 0.03;
+    const subtotal = paymentAmount / 1.2; // Sin impuestos (IVA 16% + ISH 4%)
+    const iva = subtotal * 0.16; // IVA 16%
+    const tax3 = subtotal * 0.04; // ISH 4% (Impuesto Sobre Hospedaje)
 
     await prisma.bookingMovement.create({
       data: {
@@ -231,9 +254,9 @@ async function main() {
     // Agregar algunos cargos extra aleatorios
     if (Math.random() > 0.5) {
       const extraCharge = 150.00;
-      const extraSubtotal = extraCharge / 1.16;
-      const extraIva = extraSubtotal * 0.16;
-      const extraTax3 = extraSubtotal * 0.03;
+      const extraSubtotal = extraCharge / 1.2; // Sin impuestos (IVA 16% + ISH 4%)
+      const extraIva = extraSubtotal * 0.16; // IVA 16%
+      const extraTax3 = extraSubtotal * 0.04; // ISH 4%
 
       await prisma.bookingMovement.create({
         data: {

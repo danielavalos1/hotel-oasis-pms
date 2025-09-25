@@ -32,8 +32,52 @@ export const roomService = {
       include: {
         roomInventory: true,
         channelRates: true,
+        roomRates: {
+          where: {
+            isActive: true
+          },
+          orderBy: [
+            { isDefault: 'desc' },
+            { createdAt: 'asc' }
+          ]
+        }
       },
     });
+  },
+
+  async getAllRoomsWithDetails() {
+    const rooms = await prisma.room.findMany({
+      orderBy: { roomNumber: 'asc' },
+      include: {
+        roomRates: {
+          where: {
+            isActive: true,
+            type: 'BASE'
+          },
+          take: 1
+        },
+        _count: {
+          select: {
+            bookingRooms: {
+              where: {
+                booking: {
+                  status: {
+                    in: ['CONFIRMED', 'CHECKED_IN']
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // Transform to match RoomWithDetails type
+    return rooms.map(room => ({
+      ...room,
+      bookingCount: room._count.bookingRooms,
+      baseRate: room.roomRates[0]?.basePrice || 0
+    }));
   },
 
   async getAvailableRooms(startDate: Date, endDate: Date): Promise<Room[]> {
@@ -150,27 +194,28 @@ export const roomService = {
             },
             isAvailable: true,
           },
-          select: {
-            id: true,
-            type: true,
-            capacity: true,
-            pricePerNight: true,
-            description: true,
-            amenities: true,
-          },
+          include: {
+            roomRates: {
+              where: {
+                isActive: true,
+                type: 'BASE'
+              },
+              take: 1
+            }
+          }
         });
 
         if (!roomExample) {
           throw new Error(`No room found for type ${group.type}`);
         }
 
+        const baseRate = roomExample.roomRates[0]?.basePrice || 0;
+
         return {
           ...roomExample,
-          pricePerNight:
-            typeof roomExample.pricePerNight === "object" &&
-            "toNumber" in roomExample.pricePerNight
-              ? roomExample.pricePerNight.toNumber()
-              : Number(roomExample.pricePerNight),
+          pricePerNight: typeof baseRate === "object" && "toNumber" in baseRate
+            ? baseRate.toNumber()
+            : Number(baseRate),
           availableCount: group._count.id,
         } as AvailableRoomsByType;
       })
@@ -243,7 +288,6 @@ export const roomService = {
     // Convertir el Decimal a number antes de retornar
     return rooms.map((room) => ({
       ...room,
-      pricePerNight: room.pricePerNight,
     }));
   },
 
@@ -254,7 +298,6 @@ export const roomService = {
     if (typeof data.roomNumber === "string") updateData.roomNumber = data.roomNumber;
     if (typeof data.type === "string") updateData.type = data.type as RoomType;
     if (typeof data.capacity === "number") updateData.capacity = data.capacity;
-    if (data.pricePerNight !== undefined) updateData.pricePerNight = data.pricePerNight;
     if (typeof data.description === "string") updateData.description = data.description;
     if (typeof data.isAvailable === "boolean") updateData.isAvailable = data.isAvailable;
     if (typeof data.status === "string") updateData.status = data.status as RoomStatus;
@@ -268,13 +311,7 @@ export const roomService = {
       data: updateData,
     });
     
-    // Convertir pricePerNight de Decimal a number para la respuesta
-    return {
-      ...updatedRoom,
-      pricePerNight: typeof updatedRoom.pricePerNight === 'object' && updatedRoom.pricePerNight !== null && 'toNumber' in updatedRoom.pricePerNight
-        ? (updatedRoom.pricePerNight as any).toNumber()
-        : Number(updatedRoom.pricePerNight)
-    };
+    return updatedRoom;
   },
 
   async deleteRoom(id: number): Promise<Room> {

@@ -6,6 +6,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
+    const withDetails = searchParams.get("withDetails");
 
     if (startDate && endDate) {
       const availableRooms = await roomService.getAvailableRooms(
@@ -13,6 +14,11 @@ export async function GET(request: NextRequest) {
         new Date(endDate)
       );
       return NextResponse.json({ success: true, data: availableRooms });
+    }
+
+    if (withDetails === "true") {
+      const rooms = await roomService.getAllRoomsWithDetails();
+      return NextResponse.json(rooms);
     }
 
     const rooms = await roomService.getAllRooms();

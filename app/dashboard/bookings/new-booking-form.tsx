@@ -132,12 +132,15 @@ export function NewBookingForm({ onSuccess, preselectedRoom }: NewBookingFormPro
   // Inicializar habitación preseleccionada
   useEffect(() => {
     if (preselectedRoom) {
+      // Para habitación preseleccionada, usar precio temporal hasta obtener rates
       const roomOption: RoomOption = {
         id: preselectedRoom.id,
         roomNumber: preselectedRoom.roomNumber,
         roomType: preselectedRoom.type,
-        pricePerNight: Number(preselectedRoom.pricePerNight),
         capacity: preselectedRoom.capacity,
+        basePrice: 1000, // Precio temporal
+        totalPrice: 1200, // Precio temporal con impuestos
+        pricePerNight: 1200, // Para compatibilidad
       };
       setAvailableRooms([roomOption]);
       setCanSelectRooms(true);

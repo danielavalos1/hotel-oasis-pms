@@ -1,4 +1,4 @@
-import { RoomType } from "@prisma/client";
+import { Room, RoomType } from "@prisma/client";
 
 export interface AvailableRoomsByType {
   id: number;
@@ -15,4 +15,8 @@ export interface RoomAvailabilityParams {
   checkOut: Date;
   guests?: number;
   roomType?: RoomType;
+}
+
+export interface RoomWithDetails extends Room {
+  bookingCount: number;
 }

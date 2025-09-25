@@ -34,8 +34,18 @@ import { useState } from "react";
 const roomTypeLabels: Record<RoomType, string> = ROOM_TYPE_LABELS;
 const roomBgVariants: Record<RoomStatus, string> = ROOM_BG_VARIANTS;
 
+interface RoomWithRate extends Room {
+  roomRates?: Array<{
+    id: number;
+    basePrice: any; // Decimal
+    totalPrice: any; // Decimal
+    isActive: boolean;
+    isDefault: boolean;
+  }>;
+}
+
 interface RoomCardProps {
-  room: Room;
+  room: RoomWithRate;
   rooms: Room[];
   onRoomUpdate: (data: { floor: number; status: RoomStatus }) => void;
 }
@@ -43,6 +53,14 @@ interface RoomCardProps {
 export function RoomCard({ room, rooms, onRoomUpdate }: RoomCardProps) {
   const isLightText = needsLightText(room);
   const [isNewBookingOpen, setIsNewBookingOpen] = useState(false);
+
+  // Obtener el precio de la tarifa activa por defecto
+  const defaultRate = room.roomRates?.find(rate => rate.isDefault && rate.isActive);
+  const displayPrice = defaultRate ? 
+    (typeof defaultRate.totalPrice === 'object' && 'toNumber' in defaultRate.totalPrice 
+      ? defaultRate.totalPrice.toNumber() 
+      : Number(defaultRate.totalPrice)) 
+    : 0;
 
   // Determinar qué opciones mostrar según el estado de la habitación
   const showCheckIn = room.status === "RESERVADA"; // Solo si tiene reserva
@@ -167,7 +185,7 @@ export function RoomCard({ room, rooms, onRoomUpdate }: RoomCardProps) {
               isLightText ? "text-orange-50" : ""
             }`}
           >
-            {formatRoomPrice(room.pricePerNight)}
+            {formatRoomPrice(displayPrice)}
           </span>
         </div>
 

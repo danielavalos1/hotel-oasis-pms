@@ -15,8 +15,11 @@ export interface RoomOption {
   id: number;
   roomNumber: string;
   roomType: string;
-  pricePerNight: number;
   capacity: number;
+  basePrice?: number; // Precio base de la tarifa activa
+  totalPrice?: number; // Precio total con impuestos de la tarifa activa
+  // Mantener pricePerNight para compatibilidad temporal
+  pricePerNight: number; // Será igual a totalPrice o basePrice
 }
 
 export interface FormattedBookingPayload {
