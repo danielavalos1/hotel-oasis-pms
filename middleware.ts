@@ -14,7 +14,7 @@ const publicPaths = [
 // Orígenes permitidos para CORS desde variable de entorno
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(",").map((origin) => origin.trim())
-  : ["http://localhost:4321", "https://v2.hoteloasis.mx"]; // Valores predeterminados si no hay variable
+  : ["http://localhost:4321", "https://v2.hoteloasis.mx", "https://www.hoteloasis.mx"]; // Valores predeterminados si no hay variable
 
 // Agregar función para manejar CORS
 function setCorsHeaders(response: NextResponse, request: NextRequest) {
