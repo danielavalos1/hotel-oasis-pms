@@ -1,5 +1,5 @@
 # Etapa de construcción
-FROM node:22.13.1 AS builder
+FROM node:22.23.4 AS builder
 
 # Directorio de trabajo
 WORKDIR /app
@@ -26,7 +26,7 @@ RUN pnpm exec prisma generate
 RUN pnpm run build
 
 # Etapa de producción
-FROM node:22.13.1 AS runner
+FROM node:22.23.4 AS runner
 
 WORKDIR /app
 
